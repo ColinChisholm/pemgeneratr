@@ -4,12 +4,7 @@
 \alias{multi_res}
 \title{Provides multiple resolutions of the input raster}
 \usage{
-multi_res(
-  input,
-  output = "CoVars",
-  resolution = c(2.5, 5, 10, 25),
-  SAGApath = "C:/SAGA/"
-)
+multi_res(input, output = "CoVars", resolution = c(2.5, 5, 10, 25))
 }
 \description{
 Resamples raster to specified desired resolution using the raster package.

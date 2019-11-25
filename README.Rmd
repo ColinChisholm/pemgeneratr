@@ -1,8 +1,8 @@
 ---
-title: "`PEMgeneratr`"
+# title: "`PEMgeneratr`"
 author: "Colin Chisholm"
 output:
-  # html_document:
+  html_document:
   md_document:
     variant: markdown_github
 ---
@@ -15,41 +15,6 @@ knitr::opts_chunk$set(echo = TRUE, cache=FALSE, warning = FALSE, message = FALSE
 
 <center><h1>`PEMgeneratr`</h1></center>
 
-# Purpose
-
-Provide a package of tools to support British Columbia's Predictive Ecosystem Mapping project
-
-The General workflow includes:
-  
-  1. Generation of multi-scale covariates.  Many of these created from high-resolution digital terrain models. 
-  2. Creation of the <tt>Stage 1</tt> sampling plan based on conditioned Latin Hypercube sampling (cLHS)
-  3. Processing of <tt>Stage 1</tt> field data
-  4. Generation of <tt>PEM_v1</tt> that including:
-      - predictive map of all ecological units (i.e. site series)
-      - probability maps for each eco-unit
-      - Entropy raster showing where highest uncertainty exists
-  5. Generation of <tt>Stage 2</tt> sampling plan
-      - masks out areas of high certainty -- removing these from sampling
-      - locates points for sampling using cLHS 
-      - optimizes field data transect locations -- maximizing the variability from the <tt>PEM_v1</tt> 
-  6. Processing of <tt>Stage 2</tt> field data
-  7. Generation of a final Predictive Ecosystem Map
-  
-
-# The scenario example
-For demonstration purposes a harvest block from the [Aleza Lake Research Forest](http://alrf.unbc.ca) has been selected to predict the ecosystem classes within the block area using British Columbia's Biogeoclassification system ([BGC](https://www.for.gov.bc.ca/hre/becweb/index.html)).  
-
-  
-# Generate Co-variates
-
-To start this package will examine DTM derived layers.  _Note: incorporation of satelite data is scheduled for development._  
-
-Additionally, for this example a small sub-set of data is use.  Additional scripting will be needed to tile data for parrallel process and landscape level analysis.  
-
-## Area of interest.  
-
-A polygon is loaded and the extent of that polygon is used to determine the area of interest.  However, in order to get the various resolutions of data to stack well, essential for later proceesing,  it is _critically important_ that the all corners of the area of interest are divisible by the resolutions to be generated (i.e. 2.5, 5, 10, and 25m^2^).  To accomplish this the raw aoi interest polygon's extent is pushed out to the nearest 100m.  
-
 ```{r}
 library(sf)
 library(raster)
@@ -59,6 +24,43 @@ library(tmap)
 library(PEMgeneratr) ## OUR NEW PACKAGE
 ```
 
+# Purpose
+
+Provide a package of tools to support British Columbia's Predictive Ecosystem Mapping project
+
+The General workflow includes:
+
+  1. Generation of multi-scale covariates.  Many of these created from high-resolution digital terrain models.
+  2. Creation of the <tt>Stage 1</tt> sampling plan based on conditioned Latin Hypercube sampling (cLHS)
+  3. Processing of <tt>Stage 1</tt> field data
+  4. Generation of <tt>PEM_v1</tt> that including:
+      - predictive map of all ecological units (i.e. site series)
+      - probability maps for each eco-unit
+      - Entropy raster showing where highest uncertainty exists
+  5. Generation of <tt>Stage 2</tt> sampling plan
+      - masks out areas of high certainty -- removing these from sampling
+      - locates points for sampling using cLHS
+      - optimizes field data transect locations -- maximizing the variability from the <tt>PEM_v1</tt>
+  6. Processing of <tt>Stage 2</tt> field data
+  7. Generation of a final Predictive Ecosystem Map
+
+
+# The scenario example
+For demonstration purposes a harvest block from the [Aleza Lake Research Forest](http://alrf.unbc.ca) has been selected to predict the ecosystem classes within the block area using British Columbia's Biogeoclassification system ([BGC](https://www.for.gov.bc.ca/hre/becweb/index.html)).
+
+
+# Generate Co-variates
+
+To start this package will examine DTM derived layers.  _Note: incorporation of satellite data is scheduled for development._
+
+Additionally, for this example a small sub-set of data is use.  Additional scripting will be needed to tile data for parallel process and landscape level analysis.
+
+## Area of interest.
+
+A polygon is loaded and the extent of that polygon is used to determine the area of interest.  However, in order to get the various resolutions of data to stack well, essential for later processing,  it is _critically important_ that the all corners of the area of interest are divisible by the resolutions to be generated (i.e. 2.5, 5, 10, and 25m^2^).  To accomplish this the raw aoi interest polygon's extent is pushed out to the nearest 100m.
+
+
+
 ```{r}
 aoi_raw <- st_read("../data/block.gpkg", quiet = TRUE)
 e <- as(extent(aoi_raw), "SpatialPolygons") ## for use in map below.
@@ -67,72 +69,126 @@ aoi <- aoi_snap(aoi_raw)
 
 ```
 
-## Intial Digital Terrain Models
+## Initial Digital Terrain Models
 Here the DTM is loaded and cropped to the area of interest.  The multiple resolutions of the DTM are generated, and then the co-variates are generated.
 
-_Note for the project we have decided to start with 2.5m^2^ as the finest pixel resolution._ For easier processing throughout the remainder of this project the extent of this initial dtm needs to be to be constrained to the nearest 10m interval.  
+_Note for the project we have decided to start with 2.5m^2^ as the finest pixel resolution._ In the example below the initial DTM is 1m^2^ resolution which is used to generate the coarser resolutions.
 
 
-### Load DTM 
+### Load DTM
 ```{r}
 
-# dtm <- data(dtm) ## Sample data provided -- ACTION DOCUMENT THIS.... not working 
-dtm <- raster("../data/dtm_c.tif")
+# dtm <- data(dtm) ## Sample data provided -- ACTION DOCUMENT THIS.... not working
+dtm <- raster("../data/dtm.tif")
 
-dtm_e <- as(extent(dtm), "SpatialPolygons") ## for use later 
+dtm_e <- as(extent(dtm), "SpatialPolygons") ## for use later
 # saveRDS(dtm, "./data/dtm.rds")
 dim(dtm); extent(dtm)
 ```
 
 
-### Crop DTM 
-The DTM is cropped to the aoi expanded out to the nearest 100m.  This will allow for stacking of multi resolution layers later. 
+### Crop DTM
+The DTM is cropped to the aoi expanded out to the nearest 100m.  This will allow for stacking of multi resolution layers later.
 
 ```{r}
 
 # aoi <- st_transform(aoi, crs(dtm))
 dtm <- crop(dtm, aoi)
 dim(dtm) ; extent(dtm)
-writeRaster(dtm, "../data/dtm_cropped.tif", overwrite = TRUE )
+# writeRaster(dtm, "../data/dtm_cropped.tif", overwrite = TRUE )
 ```
 
-### DTM Optimizized
+### DTM Extent Optimizized: `aoi_snap()`
 
-Below the original extent of the DTM is in red. The oringial area of interest is in green, based on the shapefile received is in green, and the adjusted area of interest is the color raster dtm.  This new extent is based on an adjusted area of interest -- expanded out to the nearest 100m.  
+Below the original extent of the DTM is in red. The original area of interest is in green, based on the shapefile received is in green, and the adjusted area of interest is the color raster dtm.  This new extent is based on an adjusted area of interest -- expanded out to the nearest 100m.
 
 ```{r, echo=FALSE}
 e$name <- "Original AOI"
 aoi$name <- "Adjusted AOI"
 dtm_e$name <- "Original DTM extent"
 
-tm_shape(dtm_e) + tm_fill(col = "name", alpha = 0, title = "") + 
-    tm_borders(col = "red", lwd = 2) + 
-  tm_shape(dtm) + tm_raster(title = "DTM: Elevation", style = "cont") + 
-  tm_shape(e) + tm_fill(col = "name",  alpha = 0, title = "") + 
-    tm_borders(col = "green", lwd = 2.0) + 
-  tm_shape(aoi) + tm_fill(col = "name", alpha = 0, title = "") + 
-    tm_borders(col = "blue", lwd = 2) + 
+tm_shape(dtm_e) + tm_fill(col = "name", alpha = 0, title = "") +
+    tm_borders(col = "red", lwd = 2) +
+  tm_shape(dtm) + tm_raster(title = "DTM: Elevation", style = "cont") +
+  tm_shape(e) + tm_fill(col = "name",  alpha = 0, title = "") +
+    tm_borders(col = "green", lwd = 2.0) +
+  tm_shape(aoi) + tm_fill(col = "name", alpha = 0, title = "") +
+    tm_borders(col = "blue", lwd = 2) +
   tm_layout(legend.outside = TRUE, frame = FALSE)
 
 ```
 
 
+## Generate Multi-resolutions: `multi_res()`
+
+Ecological processes take place across different scales.  In an effort to incorporate this into the modeling process multiple scales of covariates are generated.  This project will work with resolutions of 2.5, 5, 10, and 25m^2^.  This function takes the input raster and resamples it to the target resolutions while ensuring that all rasters have the same exact extent -- allowing for stacking of the rasters later.
+
+```{r}
+multi_res(dtm, output = "../data/CoVars", resolution = c(2.5, 5, 10, 25))
+
+# confirms same extent
+l <- list.files("../data/CoVars/", pattern = "*.tif", recursive = TRUE, full.names = TRUE)
+
+for(i in l){
+# i <- l[1]
+c <- raster(i)
+print(i)
+print("Resolution")
+print(res(c))
+print(as.vector(extent(c)))
+}
+
+```
+
+
+
+
 ## Generate terrain co-variates: `cv_dtm()`
 
-This function makes external calls for SAGA GIS to create the co-variates.  
+This function makes external calls for SAGA GIS to create the co-variates.
 
 Note that these functions _did not_ work with the bundled OSgeo4W (SAGA 2.1).  Make sure you have an installation of [SAGA 7.x](https://sourceforge.net/projects/saga-gis/).
 
-_Function works! I am running the 10m to start -- just to confirm it all works_ _Next, I will convert to geoTif and clean up the tmp files data and convert these t
+_Function works! I am running the 10m to start -- just to confirm it all works_ _Next, I will convert to geoTif and clean up the tmp files data and convert these to tif
+
+For demonstration the 25m raster is co-variates are generated. 
 
 ```{r, results='hide'}
-if(!dir.exists("./CoVars10/")){
-  cv_dtm(dtm, SAGApath = "C:/SAGA/", output = "./CoVars10" )
+dtm <- raster("../data/CoVars/25/dtm_25.tif")
+
+output_CoVars <- "../data/CoVars/25/cvs"
+
+if(!dir.exists(output_CoVars)){
+  cv_dtm(dtm, SAGApath = "C:/SAGA/", output = output_CoVars )
 }
 
 ```
 
 ```{r}
-list.files(path = "./CoVars10/saga/", pattern = "*.sdat")
+tmpFiles <- paste(output_CoVars, "saga", sep = "/")
+l <- list.files(path = tmpFiles, pattern = "*.sdat")
+l <- l[!grepl(".xml", l)] ## removes xmls from the list
+print(l)
 ```
 
+## Prepare Covariate Raster Stack
+
+To be able to integrate all scales of the rasters they need to be stacked -- have the same resolution and extent.  As such all need to converted to a 2.5m^2^ resolution with the same extent. 
+
+As an example the tmp SAGA file `r l[21]` is converted to 25m resolution.  Note that the extent is consitent and resolution is now 2.5m.  
+
+
+
+```{r}
+sagaFile <- paste(tmpFiles, l[21], sep = "/")
+r <- raster(sagaFile)
+
+extent(r);  res(r)
+
+r_out <- disaggregate(r, 10)
+extent(r_out)
+res(r_out)
+
+```
+
+_ACTION: build the above into a function that delivers geoTiffs, place in a target directory, places a suffix of the source resolution, and removes all the temporary files._ 

@@ -4,6 +4,15 @@
 </h1>
 </center>
 
+``` r
+library(sf)
+library(raster)
+library(rgdal)
+library(tmap)
+
+library(PEMgeneratr) ## OUR NEW PACKAGE
+```
+
 Purpose
 =======
 
@@ -60,14 +69,7 @@ To accomplish this the raw aoi interest polygon’s extent is pushed out
 to the nearest 100m.
 
 ``` r
-library(sf)
-library(raster)
-library(PEMgeneratr)
-library(rgdal)
-library(tmap)
-
-
-aoi_raw <- st_read("../data/Block.gpkg", quiet = TRUE)
+aoi_raw <- st_read("../data/block.gpkg", quiet = TRUE)
 e <- as(extent(aoi_raw), "SpatialPolygons") ## for use in map below.
 
 aoi <- aoi_snap(aoi_raw)
@@ -86,6 +88,11 @@ Intial Digital Terrain Models
 Here the DTM is loaded and cropped to the area of interest. The multiple
 resolutions of the DTM are generated, and then the co-variates are
 generated.
+
+*Note for the project we have decided to start with 2.5m<sup>2</sup> as
+the finest pixel resolution.* For easier processing throughout the
+remainder of this project the extent of this initial dtm needs to be to
+be constrained to the nearest 10m interval.
 
 ### Load DTM
 
@@ -126,10 +133,10 @@ dim(dtm) ; extent(dtm)
     ## ymax       : 5995800
 
 ``` r
-writeRaster(dtm, "../data/dtm_cropped.tif", overwrite = TRUE )
+# writeRaster(dtm, "../data/dtm_cropped.tif", overwrite = TRUE )
 ```
 
-### DTM Optimizized
+### DTM Extent Optimizized
 
 Below the original extent of the DTM is in red. The oringial area of
 interest is in green, based on the shapefile received is in green, and
@@ -137,7 +144,54 @@ the adjusted area of interest is the color raster dtm. This new extent
 is based on an adjusted area of interest – expanded out to the nearest
 100m.
 
-![](README_files/figure-markdown_github/unnamed-chunk-4-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
+Generate Multi-resolutions: `multi_res()`
+-----------------------------------------
+
+Ecological processes take place across different scales. In an effort to
+incorporate this into the modeling process multiple scales of covariates
+are generated. This project will work with resolutions of 2.5, 5, 10,
+and 25m<sup>2</sup>. This function takes the input raster and resamples
+it to the target resolutions while ensuring that all rasters have the
+same exact extent – allowing for stacking of the rasters later.
+
+``` r
+multi_res(dtm, output = "../data/CoVars", resolution = c(2.5, 5, 10, 25))
+
+# confirms same extent
+l <- list.files("../data/CoVars/", pattern = "*.tif", recursive = TRUE, full.names = TRUE)
+
+for(i in l){
+# i <- l[1]  
+c <- raster(i)
+print(i)
+print("Resolution")
+print(res(c))
+print(as.vector(extent(c)))
+}
+```
+
+    ## [1] "../data/CoVars//10/dtm_10.tif"
+    ## [1] "Resolution"
+    ## [1] 10 10
+    ## [1]  558300  559800 5994700 5995800
+    ## [1] "../data/CoVars//2.5/dtm_2.5.tif"
+    ## [1] "Resolution"
+    ## [1] 2.5 2.5
+    ## [1]  558300  559800 5994700 5995800
+    ## [1] "../data/CoVars//25/cvs/saga/dtm.tif"
+    ## [1] "Resolution"
+    ## [1] 25 25
+    ## [1]  558300  559800 5994700 5995800
+    ## [1] "../data/CoVars//25/dtm_25.tif"
+    ## [1] "Resolution"
+    ## [1] 25 25
+    ## [1]  558300  559800 5994700 5995800
+    ## [1] "../data/CoVars//5/dtm_5.tif"
+    ## [1] "Resolution"
+    ## [1] 5 5
+    ## [1]  558300  559800 5994700 5995800
 
 Generate terrain co-variates: `cv_dtm()`
 ----------------------------------------
@@ -151,16 +205,22 @@ Note that these functions *did not* work with the bundled OSgeo4W (SAGA
 
 *Function works! I am running the 10m to start – just to confirm it all
 works* \_Next, I will convert to geoTif and clean up the tmp files data
-and convert these t
+and convert these to tif
+
+For demonstration the 25m raster is co-variates are genearated.
 
 ``` r
-if(!dir.exists("./CoVars10/")){
-  cv_dtm(dtm, SAGApath = "C:/SAGA/", output = "./CoVars10" )
+dtm <- raster("../data/CoVars/25/dtm_25.tif")
+
+output_CoVars <- "../data/CoVars/25/cvs"
+
+if(!dir.exists(output_CoVars)){
+  cv_dtm(dtm, SAGApath = "C:/SAGA/", output = output_CoVars )
 }
 ```
 
 ``` r
-list.files(path = "./CoVars10/saga/", pattern = "*.sdat")
+list.files(path = paste(output_CoVars, "saga", sep = "/"), pattern = "*.sdat")
 ```
 
     ##  [1] "Aspect.sdat"                      
