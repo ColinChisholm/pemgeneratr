@@ -2,3 +2,4 @@
 
 export(aoi_snap)
 export(cv_dtm)
+export(multi_res)

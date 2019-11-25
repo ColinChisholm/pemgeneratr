@@ -53,12 +53,14 @@ A polygon is loaded and the extent of that polygon is used to determine the area
 ```{r}
 library(sf)
 library(raster)
-library(PEMgeneratr)
 library(rgdal)
 library(tmap)
 
+library(PEMgeneratr) ## OUR NEW PACKAGE
+```
 
-aoi_raw <- st_read("../data/Block.gpkg", quiet = TRUE)
+```{r}
+aoi_raw <- st_read("../data/block.gpkg", quiet = TRUE)
 e <- as(extent(aoi_raw), "SpatialPolygons") ## for use in map below.
 
 aoi <- aoi_snap(aoi_raw)
