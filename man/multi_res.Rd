@@ -6,6 +6,13 @@
 \usage{
 multi_res(input, output = "CoVars", resolution = c(2.5, 5, 10, 25))
 }
+\arguments{
+\item{input}{a raster object (not a file)}
+
+\item{resolution}{= c(5, 10, 25)  multiple resolutions can be specified}
+
+\item{SAGApath}{is the path to SAGA installation -- needed for windows machines.}
+}
 \description{
 Resamples raster to specified desired resolution using the raster package.
 NOTE: an attempt was made to use the SAGA resample but I had trouble aligning the rasters. I am sure that gdal can be used but for now funtioning is internal to R packages.

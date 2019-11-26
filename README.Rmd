@@ -3,8 +3,11 @@
 author: "Colin Chisholm"
 output:
   html_document:
+    self_contained: true
   md_document:
     variant: markdown_github
+editor_options:
+  chunk_output_type: console
 ---
 
 
@@ -16,12 +19,17 @@ knitr::opts_chunk$set(echo = TRUE, cache=FALSE, warning = FALSE, message = FALSE
 <center><h1>`PEMgeneratr`</h1></center>
 
 ```{r}
+library(tidyverse)
+library(knitr)
+library(kableExtra) ##devtools::install_github("haozhu233/kableExtra")
+
 library(sf)
 library(raster)
 library(rgdal)
 library(tmap)
 
 library(PEMgeneratr) ## OUR NEW PACKAGE
+
 ```
 
 # Purpose
@@ -55,21 +63,22 @@ To start this package will examine DTM derived layers.  _Note: incorporation of 
 
 Additionally, for this example a small sub-set of data is use.  Additional scripting will be needed to tile data for parallel process and landscape level analysis.
 
-## Area of interest.
+## Area of interest: `aoi_snap()`
 
 A polygon is loaded and the extent of that polygon is used to determine the area of interest.  However, in order to get the various resolutions of data to stack well, essential for later processing,  it is _critically important_ that the all corners of the area of interest are divisible by the resolutions to be generated (i.e. 2.5, 5, 10, and 25m^2^).  To accomplish this the raw aoi interest polygon's extent is pushed out to the nearest 100m.
 
+_Note: The area of interest needs to be within the bounds of the extent of the input raster.  Currently, `aoi_snap()` expands the aoi perhaps a version that shrinks the aoi should be created (this could be a parameter specification)._
 
+```{r polygon-aoi}
 
-```{r}
 aoi_raw <- st_read("../data/block.gpkg", quiet = TRUE)
 e <- as(extent(aoi_raw), "SpatialPolygons") ## for use in map below.
-
 aoi <- aoi_snap(aoi_raw)
 
 ```
 
 ## Initial Digital Terrain Models
+
 Here the DTM is loaded and cropped to the area of interest.  The multiple resolutions of the DTM are generated, and then the co-variates are generated.
 
 _Note for the project we have decided to start with 2.5m^2^ as the finest pixel resolution._ In the example below the initial DTM is 1m^2^ resolution which is used to generate the coarser resolutions.
@@ -80,25 +89,19 @@ _Note for the project we have decided to start with 2.5m^2^ as the finest pixel 
 
 # dtm <- data(dtm) ## Sample data provided -- ACTION DOCUMENT THIS.... not working
 dtm <- raster("../data/dtm.tif")
+dtm_e <- as(extent(dtm), "SpatialPolygons") ## for use in map below
 
-dtm_e <- as(extent(dtm), "SpatialPolygons") ## for use later
-# saveRDS(dtm, "./data/dtm.rds")
 dim(dtm); extent(dtm)
 ```
 
 
-### Crop DTM
+### Crop DTM `aoi_snap()`
 The DTM is cropped to the aoi expanded out to the nearest 100m.  This will allow for stacking of multi resolution layers later.
 
 ```{r}
-
-# aoi <- st_transform(aoi, crs(dtm))
 dtm <- crop(dtm, aoi)
 dim(dtm) ; extent(dtm)
-# writeRaster(dtm, "../data/dtm_cropped.tif", overwrite = TRUE )
 ```
-
-### DTM Extent Optimizized: `aoi_snap()`
 
 Below the original extent of the DTM is in red. The original area of interest is in green, based on the shapefile received is in green, and the adjusted area of interest is the color raster dtm.  This new extent is based on an adjusted area of interest -- expanded out to the nearest 100m.
 
@@ -124,19 +127,17 @@ tm_shape(dtm_e) + tm_fill(col = "name", alpha = 0, title = "") +
 Ecological processes take place across different scales.  In an effort to incorporate this into the modeling process multiple scales of covariates are generated.  This project will work with resolutions of 2.5, 5, 10, and 25m^2^.  This function takes the input raster and resamples it to the target resolutions while ensuring that all rasters have the same exact extent -- allowing for stacking of the rasters later.
 
 ```{r}
-multi_res(dtm, output = "../data/CoVars", resolution = c(2.5, 5, 10, 25))
+outputFolder <- "e:/tmp/dtms"
+
+## Generate alternate coarser grain resolutions of the input
+multi_res(dtm, output = outputFolder, resolution = c(2.5, 5, 10, 25))
 
 # confirms same extent
-l <- list.files("../data/CoVars/", pattern = "*.tif", recursive = TRUE, full.names = TRUE)
+  l <- list.files(outputFolder, pattern = "*.tif", recursive = TRUE, full.names = TRUE)
 
-for(i in l){
-# i <- l[1]
-c <- raster(i)
-print(i)
-print("Resolution")
-print(res(c))
-print(as.vector(extent(c)))
-}
+  for(i in l){
+  c <- raster(i) ;   print(i) ;  print("Resolution") ;  print(res(c)) ; print(as.vector(extent(c)))
+  }
 
 ```
 
@@ -145,50 +146,144 @@ print(as.vector(extent(c)))
 
 ## Generate terrain co-variates: `cv_dtm()`
 
-This function makes external calls for SAGA GIS to create the co-variates.
+This function makes external calls for SAGA GIS to create the co-variates, converts these to geoTif, and removes the tmp files
 
 Note that these functions _did not_ work with the bundled OSgeo4W (SAGA 2.1).  Make sure you have an installation of [SAGA 7.x](https://sourceforge.net/projects/saga-gis/).
 
-_Function works! I am running the 10m to start -- just to confirm it all works_ _Next, I will convert to geoTif and clean up the tmp files data and convert these to tif
 
-For demonstration the 25m raster is co-variates are generated. 
+For demonstration the 25m raster is co-variates are generated.
 
 ```{r, results='hide'}
-dtm <- raster("../data/CoVars/25/dtm_25.tif")
 
-output_CoVars <- "../data/CoVars/25/cvs"
+output_CoVars <- "e:/tmp" ## where to place the covariates
 
-if(!dir.exists(output_CoVars)){
-  cv_dtm(dtm, SAGApath = "C:/SAGA/", output = output_CoVars )
+l <- list.files(outputFolder, recursive = TRUE, full.names = TRUE) ## list of DTMs to process
+
+
+if(!dir.exists(output_CoVars)){## skip this if they are already generated -- for easier report generation.
+  for(i in l){  ## Loop through Resolutions and produce covariates
+    # i<-l[1] ##testing
+
+    print(i)
+    dtm <- raster(i)
+    cv_dtm(dtm, SAGApath = "C:/SAGA/", output = output_CoVars)
+  }
+}
+```
+
+
+### A Summary table of files generated
+
+
+```{r, echo = FALSE}
+
+## Get list of files
+l <- list.files(path = output_CoVars, pattern = "*.tif",
+                recursive = TRUE)
+l <- l[!grepl(".xml", l)] ## removes xmls from the list
+
+## Create an empty dataframe to hold the values
+n <- length(l)
+cv_summary <- tibble(File = character(n),
+                     xmin = numeric(n),
+                     xmax = numeric(n),
+                     ymin = numeric(n),
+                     ymax = numeric(n),
+                     res  = numeric(n)
+                     )
+
+for(i in 1:length(l)){
+  # i <- 1
+
+  # print(l[i])
+  cv_summary$File[i] <- basename(l[i])
+
+  r <- raster(paste(output_CoVars, l[i], sep = "/"))
+  e <- as.vector(extent(r))
+  cv_summary$xmin[i] <- e[1]
+  cv_summary$xmax[i] <- e[2]
+  cv_summary$ymin[i] <- e[3]
+  cv_summary$ymax[i] <- e[4]
+  cv_summary$res[i]  <- res(r)[1]
 }
 
+kable(cv_summary[order(cv_summary$File),]) %>%
+  kable_styling(fixed_thead = T) %>%
+  scroll_box(width = "100%", height = "300px")
 ```
 
-```{r}
-tmpFiles <- paste(output_CoVars, "saga", sep = "/")
-l <- list.files(path = tmpFiles, pattern = "*.sdat")
+We are almost there! The Covariates have all been generated and they all have the same extent. However, They now need to have the same resolution -- see the next section.
+
+
+
+## Prepare Covariate Raster Stack: `cv_FineRes`
+
+`cv_FineRes` uses `raster::disaggregate` on the coarse grained rasters are converted to fine grain for stacking.
+
+
+
+Note: all rasters that need to be pushed to the finer scale need to be divisible by that finer scale.
+
+```{r, results='hide'}
+
+## Create list of covariate files.
+l <- list.files("e:/tmp/5/", pattern = "*.tif", full.names = TRUE)
+l <- append(l, list.files("e:/tmp/10/", pattern = "*.tif", full.names = TRUE))
+l <- append(l, list.files("e:/tmp/25/", pattern = "*.tif", full.names = TRUE))
+
+
+## Push list to fine resolution.
+if(!dir.exists("e:/tmp/2.5_others")){  ## If statement for easier processing of document
+cv_FineRes(inputFileList = l, output = "e:/tmp/2.5_others", targetRes = 2.5)
+}
+```
+
+#### Summary table
+
+Following `cv_FineRes()` all covariates are not of the same extent and resolution.
+```{r, echo=FALSE}
+## Get list of files
+l <- list.files(path = "e:/tmp/2.5", pattern = "*.tif",
+                recursive = TRUE, full.names = TRUE)
+l <- append(l, list.files(path = "e:/tmp/2.5_others", pattern = "*.tif",
+                          recursive = TRUE,  full.names = TRUE))
 l <- l[!grepl(".xml", l)] ## removes xmls from the list
-print(l)
+
+
+
+## Create an empty dataframe to hold the values
+n <- length(l)
+cv_summary <- tibble(File = basename(l),
+                     xmin = numeric(n),
+                     xmax = numeric(n),
+                     ymin = numeric(n),
+                     ymax = numeric(n),
+                     res  = numeric(n)
+                     )
+
+
+
+for(i in 1:length(l)){
+  # print(l[i])
+  r <- raster(l[i], sep = "/")
+  e <- as.vector(extent(r))
+  cv_summary$xmin[i] <- e[1]
+  cv_summary$xmax[i] <- e[2]
+  cv_summary$ymin[i] <- e[3]
+  cv_summary$ymax[i] <- e[4]
+  cv_summary$res[i]  <- res(r)[1]
+}
+
+kable(cv_summary[order(cv_summary$File),]) %>%
+  kable_styling(fixed_thead = T) %>%
+  scroll_box(width = "100%", height = "300px")
 ```
 
-## Prepare Covariate Raster Stack
-
-To be able to integrate all scales of the rasters they need to be stacked -- have the same resolution and extent.  As such all need to converted to a 2.5m^2^ resolution with the same extent. 
-
-As an example the tmp SAGA file `r l[21]` is converted to 25m resolution.  Note that the extent is consitent and resolution is now 2.5m.  
-
-
+As a final test a raster `stack()` is created --_Success_!
 
 ```{r}
-sagaFile <- paste(tmpFiles, l[21], sep = "/")
-r <- raster(sagaFile)
+cvs <- stack(l)
 
-extent(r);  res(r)
-
-r_out <- disaggregate(r, 10)
-extent(r_out)
-res(r_out)
+names(cvs)
 
 ```
-
-_ACTION: build the above into a function that delivers geoTiffs, place in a target directory, places a suffix of the source resolution, and removes all the temporary files._ 
