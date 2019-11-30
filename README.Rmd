@@ -273,7 +273,7 @@ for(i in 1:length(l)){
   cv_summary$res[i]  <- res(r)[1]
 }
 
-kable(cv_summary[order(cv_summary$File),]) %>%
+kable(head(cv_summary[order(cv_summary$File),15])) %>%
   kable_styling(fixed_thead = T) %>%
   scroll_box(width = "100%", height = "300px")
 ```
