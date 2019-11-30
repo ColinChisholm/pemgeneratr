@@ -6,7 +6,7 @@
 #' This is an essential first step.  As subsequent co-variate layers will be generated at multiple resolutions (e.g. 5, 10, 25m^2) and then disaggregate'd back to the lowest resolution.
 #' Having the aoi set 100m break-points facilitates this.
 #'
-#' @parm aoi is a sf object (e.g. polygon). The bounding box of the shape will be used to create rectangular shape.
+#' @param aoi is a sf object (e.g. polygon). The bounding box of the shape will be used to create rectangular shape.
 #' @keywords AOI, polygon
 #' @export
 #' @examples

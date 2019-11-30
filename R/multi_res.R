@@ -6,14 +6,14 @@
 #' For the PEM project we generally start with a high resolution dtm.  Resampling to a set of lower resolution DTMs is used to capture multi-scale influences on the ecological unit.
 #' NOTE: to ensure raster stacking of all covariates this operation should be completed only on data that has been cropped to the AOI using aoi_snap()
 #'
-#' @param input a raster object (not a file)
+#' @param input a \code{raster::raster} object (not a file)
 #' @param resolution = c(5, 10, 25)  multiple resolutions can be specified
-#' @param SAGApath is the path to SAGA installation -- needed for windows machines.
-#' @keywords DTM, resampling, SAGA
+#' @keywords resample
 #' @export
-#' @example
-#' ##
-#'
+#' @examples
+#' ## generate default raster sizes
+#' multi_res(r)
+
 
 
 multi_res <- function(input, output="CoVars", resolution = c(2.5, 5, 10, 25)){

@@ -6,6 +6,9 @@
 \usage{
 aoi_snap(aoi)
 }
+\arguments{
+\item{aoi}{is a sf object (e.g. polygon). The bounding box of the shape will be used to create rectangular shape.}
+}
 \description{
 Adjusts the area of interest to the nearest 100m.
 Note that this package assumes to data is in a metric equal area projection.

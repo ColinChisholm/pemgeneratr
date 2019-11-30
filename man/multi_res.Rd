@@ -7,11 +7,9 @@
 multi_res(input, output = "CoVars", resolution = c(2.5, 5, 10, 25))
 }
 \arguments{
-\item{input}{a raster object (not a file)}
+\item{input}{a \code{raster::raster} object (not a file)}
 
 \item{resolution}{= c(5, 10, 25)  multiple resolutions can be specified}
-
-\item{SAGApath}{is the path to SAGA installation -- needed for windows machines.}
 }
 \description{
 Resamples raster to specified desired resolution using the raster package.
@@ -21,6 +19,8 @@ NOTE: an attempt was made to use the SAGA resample but I had trouble aligning th
 For the PEM project we generally start with a high resolution dtm.  Resampling to a set of lower resolution DTMs is used to capture multi-scale influences on the ecological unit.
 NOTE: to ensure raster stacking of all covariates this operation should be completed only on data that has been cropped to the AOI using aoi_snap()
 }
-\keyword{DTM,}
-\keyword{SAGA}
-\keyword{resampling,}
+\examples{
+## generate default raster sizes
+multi_res(r)
+}
+\keyword{resample}

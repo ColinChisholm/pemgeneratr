@@ -3,4 +3,5 @@
 export(aoi_snap)
 export(cv_FineRes)
 export(cv_dtm)
+export(cv_tile)
 export(multi_res)

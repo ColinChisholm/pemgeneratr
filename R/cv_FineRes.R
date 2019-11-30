@@ -7,9 +7,9 @@
 #' @param targetRes desired resolution to convert to.
 #' @keywords raster, disaggregate
 #' @export
-#' @example
+#' @examples
 #' l <- list.files("e:/covariates/10")
-#' cv_FineRes(l, output = "e:/covariates/2.5)
+#' cv_FineRes(l, output = "e:/covariates/2.5")
 
 
 cv_FineRes <- function(inputFileList, output = "e:/tmp/2.5", targetRes = 2.5){

@@ -16,5 +16,9 @@ cv_FineRes(inputFileList, output = "e:/tmp/2.5", targetRes = 2.5)
 \description{
 Uses raster::disagregate to push a set of rasters to a target resolution.  Note that input raster resolution need to be divisible by the target resolution.
 }
+\examples{
+l <- list.files("e:/covariates/10")
+cv_FineRes(l, output = "e:/covariates/2.5")
+}
 \keyword{disaggregate}
 \keyword{raster,}
