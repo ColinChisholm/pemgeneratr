@@ -15,4 +15,5 @@ RoxygenNote: 7.0.0.9000
 Imports:
     sf,
     raster,
-    rgdal
+    rgdal,
+    GSIF

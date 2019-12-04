@@ -1,6 +1,6 @@
 #' Tiles a set of rasters
 #'
-#' Uses \code{SpaDES.tools::splitRaster} to generate tiles of a given set of rasters using parallel processing
+#' Uses \code{SpaDES.tools::splitRaster} to generate tiles of a given set of rasters using parallel processing.
 #'
 #' @param output character, destination of output tiles.  Note that a subdirectory for each raster given will be created within this folder.
 #' @param rList a vector of files to process (e.g. \code{list.files("e:/rasters", pattern= "*.tif")})

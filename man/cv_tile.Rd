@@ -16,7 +16,7 @@ cv_tile(rList, output = "./tiles/", pxCount = 1000, index = TRUE)
 \item{index}{When \code{TRUE} genearates a shapefile \code{tiles.shp} -- for each set of tiles generated.}
 }
 \description{
-Uses \code{SpaDES.tools::splitRaster} to generate tiles of a given set of rasters using parallel processing
+Uses \code{SpaDES.tools::splitRaster} to generate tiles of a given set of rasters using parallel processing.
 }
 \examples{
 r <- raster::raster(ncol=100, nrow=100) ## empty raster
