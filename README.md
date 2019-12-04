@@ -14,6 +14,17 @@ pre {
     word-wrap: normal !important;
     white-space: pre !important;
 }​
+    
+pre {
+    height: auto;
+    max-height: 200px;
+    overflow: auto;
+    background-color: #eeeeee;
+    word-break: normal !important;
+    word-wrap: normal !important;
+    white-space: pre !important;
+}​
+
 </style>
 
 
