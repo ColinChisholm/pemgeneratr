@@ -4,9 +4,7 @@
 </h1>
 </center>
 
-<div style = "
-
-pre {
+<div style = "pre {
     height: auto;
     max-height: 200px;
     overflow: auto;
@@ -14,9 +12,7 @@ pre {
     word-break: normal !important;
     word-wrap: normal !important;
     white-space: pre !important;
-};​
-    
-pre {
+}; code {
     height: auto;
     max-height: 200px;
     overflow: auto;
@@ -26,7 +22,7 @@ pre {
     white-space: pre !important;
 };​
 ">
-</style>
+
 
 
 ``` r
