@@ -39,7 +39,7 @@ The scenario example
 
 For demonstration purposes a harvest block from the [Aleza Lake Research
 Forest](http://alrf.unbc.ca) has been selected to predict the ecosystem
-classes within the block area using British Columbia’s BC’s [Biogeoclimatic Ecosystem Classification (BEC) system]https://www.for.gov.bc.ca/hre/becweb/index.html).
+classes within the block area using British Columbia’s BC’s [Biogeoclimatic Ecosystem Classification (BEC) system](https://www.for.gov.bc.ca/hre/becweb/index.html).
 
 Generate Co-variates
 ====================
