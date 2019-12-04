@@ -4,7 +4,8 @@
 </h1>
 </center>
 
-<style>
+<div style = "
+
 pre {
     height: auto;
     max-height: 200px;
@@ -13,7 +14,7 @@ pre {
     word-break: normal !important;
     word-wrap: normal !important;
     white-space: pre !important;
-}​
+};​
     
 pre {
     height: auto;
@@ -23,8 +24,8 @@ pre {
     word-break: normal !important;
     word-wrap: normal !important;
     white-space: pre !important;
-}​
-
+};​
+">
 </style>
 
 
@@ -5312,3 +5313,6 @@ names(cvs)
     ## [83] "TWI_10"                   "TWI_25"                  
     ## [85] "TWI_5"                    "VerticalDistance_10"     
     ## [87] "VerticalDistance_25"      "VerticalDistance_5"
+
+
+</div>
