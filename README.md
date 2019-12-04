@@ -4,6 +4,19 @@
 </h1>
 </center>
 
+<style>
+pre {
+    height: auto;
+    max-height: 200px;
+    overflow: auto;
+    background-color: #eeeeee;
+    word-break: normal !important;
+    word-wrap: normal !important;
+    white-space: pre !important;
+}​
+</style>
+
+
 ``` r
 library(tidyverse)
 library(knitr)
