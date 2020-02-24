@@ -17,5 +17,6 @@ Imports:
     raster,
     rgdal,
     GSIF,
-    SpaDES.tools
+    SpaDES.tools,
+    mlr
 Roxygen: list(markdown = TRUE)
