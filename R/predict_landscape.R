@@ -4,66 +4,157 @@
 #' In order to process the landscape level prediction the input co-variated are tiled
 #' and then mosaic'd together at the end.
 #'
+#' **Action** _is there a bug in tilemaker or with stars causing a xy offset error.
+#' Solution is currently a hack.  See `load tile area`.
+#'
 #' @param model A `mlr` model object
 #' @param cov   A list of raster files.  These will be loaded as a `stars` object
 #' @param tilesize Specify the number of pixels in the `x` and `y` directions for the tiles to be generated.  If your computer is mememory limited use a smaller tile (e.g. 500).
-#' @param name Filename to of the final dataset
 #' @param outDir directory for the output file.
 #' @keywords predict, landscape
 #' @export
-#' predict_landscape(model = my_mlr_model,  ## an mlr model
-#'                   cov = cov_list,        ## list of rasters -- must have the same names
-#'                                          ## used to make the mlr model
-#'                   tilesize = 1000,       ## tiles will be generated 1000 x 1000 px
-#'                   name = "SiteSeries"    ## name of the output file
-#'                   ourDir = "e:/output"   ## output directory
-#'                   )
+#' @examples
+#' ### Testing
+#' cov <- list.files("e:/tmpGIS/PEM_cvs/", pattern = "*.tif",full.names = TRUE)
+#' cov <- cov[-(grep(cov, pattern = "xml"))]
+#'
+#' predict_landscape(model = "e:/tmp/model_gen_test/model.rds",
+#'                   cov = cov,
+#'                   tilesize = 1000,
+#'                   outDir = "e:/tmp/predict_landscape")
 
-predict_landscape <- function(model,
-                              cov,
-                              tilesize = 500,
-                              name = "predicted",
-                              ourDir = "./predicted") {
+predict_landscape <- function(model, cov,tilesize = 500,
+                              outDir = "./predicted") {
+  ## libraries  -----
+    library(dplyr)
+    library(mlr)
 
+  ## Adjust names
+  ## This will be used in the loop to rename stars object
+  n <- basename(cov)
+  n <- gsub(".tif", "", n)
 
-## load covariates ------------
-
-
-## update cov names -----------
-
-
-
-## create tiles ---------------
-
-
+  ## Load the model -----
+  mod <- readRDS(model)
 
 
-## begin loop through tiles -----
+  ## Error handle -- model vs. cov -----------
+  ## If names in model features are found in the cov list continue.
+  ## ELSE exit with message
+  if (length(setdiff(mod$features, n)) != 0) { ## tests if all model features are found in the cov list
+    ## On model vs. cov error ---------------
+    print("Name mis-match between the model features and the names of the rasters.")
+    print("The following raster co-variates are not found in the model features list:")
+    print(setdiff(mod$features, n))
+  } else {
+    dir.create(outDir) ## create output dir -----------
 
-  ## * load tile area---------
+    ## create tiles ---------------
+    tiles <- pemgeneratr::tile_index(cov[1], tilesize)
 
-
-  ## * update names ---------
-
-
-  ## * convert tile to dataframe ---------
-
-
-  ## * predict ---------
-
-
-  ## * geo-link predict values ---------
-
-
-  ## * rasterize ---------
-
-
-  ## * save tile ---------
-
-  ## END LOOP
+    ## alternate -- outside of pemgeneratr
+    # source("./R/tile_index.R")  ## load the tile index function
+    # tiles <- tile_index(cov[1], tilesize)
 
 
+    ## begin loop through tiles -----
 
-## Mosaic Tiles ---------------
+    ## set up progress messaging
+    a <- 0 ## running total of area complete
+    ta <- sum(as.numeric(sf::st_area(tiles)))
 
-}
+
+    for (i in 1:2) {    ## testing first 2 tiles       ##nrow(tiles)) {
+        t <- tiles[i,]  ## get tile
+        print(paste("working on ", i, "of", nrow(tiles)))
+        print("...")
+
+
+        ## * load tile area---------
+        print("... loading new data (from rasters)...")
+        r <- stars::read_stars(cov,
+                        RasterIO = list(nXOff  = t$offset.x[1]+1, ## hack -- stars and tile_maker issue??
+                                        nYOff  = t$offset.y[1]+1,
+                                        nXSize = t$region.dim.x[1],
+                                        nYSize = t$region.dim.y[1]))
+
+        ## * update names ---------
+        names(r) <- n
+
+        ## * convert tile to dataframe ---------
+        rsf <- sf::st_as_sf(r, as_points = TRUE)
+        rsf <- na.omit(rsf)
+
+        ## * predict ---------
+        print("... modelling outcomes (predicting)...")
+        pred <- predict(mod, newdata = rsf)
+
+        ## * geo-link predicted values ---------
+        r_out <- cbind(rsf, pred)
+
+        ## layers to keep (i.e. newly predicted layers)
+        keep <- setdiff(names(r_out),
+                        names(r))
+        keep <- keep[-length(keep)] ## drops the last entry (geometry field, not a name)
+
+        r_out <- r_out %>% dplyr::select(keep)
+
+        ## Set up subdirectories for rastertile outputs
+        print("... exporting raster tiles...")
+        for (k in keep) {
+          dir.create(paste(outDir, k, sep = "/"))
+        }
+
+
+
+        ## * save tile (each pred item saved) ---------
+        for (j in 1:length(keep)) {
+          # j <- 2  ## testing
+          out <- stars::st_rasterize(r_out[j],
+                                       template = r[1])
+          stars::write_stars(out,
+                             paste0(outDir,"/",
+                                    keep[j], "/",             #sub-directoy
+                                    keep[j], "_", i, ".tif")) #tile name
+        }
+
+        ## * report progress -----
+        a <- a + as.numeric(sf::st_area(t))
+        print(paste(round(a/ta*100,1), "% complete"))
+        print("") ## blank line
+        } ## END LOOP -------------
+    print("All predicted tiles generated")
+
+
+    ## Save the names of the model response -----
+    ## The levels are in the multiclass
+    respNames <- levels(r_out$response) ## this becomes the dictionary to describe the raster values
+    write.csv(respNames, paste(outDir, "response_names.csv",
+                               sep = "/"),
+              row.names = FALSE)
+
+
+    ## Mosaic Tiles ---------------
+
+    print("Generating raster mosaics")
+    for (k in keep) {
+      # get list of tiles
+      r_tiles <- list.files(paste(outDir, k, sep = "/"),
+                            pattern = ".tif",
+                            full.names = TRUE)
+      ## mosaic
+      gdalUtils::mosaic_rasters(gdalfile = r_tiles, ## list of rasters to mosaic
+                                dst_dataset = paste0(outDir, "/", k, ".tif"),  #output: dir and filename
+                                output_Raster = TRUE) ## saves the raster (not just a virtual raster)
+
+    }
+
+
+  } ### end positive if statment ----------
+
+} ### end function
+
+
+
+
+
