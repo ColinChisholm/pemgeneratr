@@ -29,7 +29,21 @@ model_gen <- function(traindat, target, outDir = ".", rseed = NA) {
   ifelse(!dir.exists(file.path(outDir)),                # if folder does not exist
           dir.create(file.path(outDir)), FALSE)         # create it
 
-  ## call report -- passing variables to it
+
+  ## Convert to data frame -------------------
+  if("sf" %in% class(traindat)) {
+    traindat <- as.data.frame(traindat)
+    traindat <- traindat[, -length(traindat)]
+    print("Data is a sf object -- converted to dataframe for modelling")
+  }
+
+  ## error testing ----------------
+  if (length(is.na(traindat[,target])) > 0) {
+    print(paste("There are,", sum(is.na(traindat[,target]))  , "NA values in the target:", target))
+    break()
+  }
+
+  ## call report -- passing variables to it --------------
   RMD <- system.file("rmd", "model_gen.Rmd", package = "pemgeneratr") ## this syntax designed for a package install.
   # RMD <- "./R/model_gen.Rmd"  ## manually set for sourcing this function
 
