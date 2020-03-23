@@ -7,6 +7,8 @@ params:
   target: target
   rseed: NA
 ---
+
+
   
 
 ```{r setup, include=FALSE}
@@ -29,12 +31,33 @@ target <- params$target
 outDir <- params$outDir
 ```
 
+<!-- # _Testing_  -->
+<!-- ```{r} -->
+<!-- ## Load the data -->
+<!-- modDat <- sf::st_read("e:/workspace/2020/PEM/ALRF_PEMv2/spatialData/SamplePoints_with_rast_values.gpkg", -->
+<!--   quiet = TRUE) %>%  -->
+<!--   dplyr::select(SiteSeries, aspect_025:VerticalDistance_25m) %>%  -->
+<!--   dplyr::select(-c(Vertical_distance_025:VerticalDistance_25m,   ## remove problematic covariates -->
+<!--                    overland_flow_025:OverlandFlowDistance_25m)) %>%  -->
+<!--   as.data.frame() -->
+<!-- modDat <- modDat[, -length(modDat)] -->
+<!-- modDat <- modDat[!is.na(modDat$SiteSeries),] -->
+<!-- target <- "SiteSeries" -->
+
+<!-- ## define output directory -->
+<!-- outDir <- "e:/tmp/mlr_5m_200323/" -->
+<!-- rseed <- NA -->
+<!-- ``` -->
+
+
+
+
 
 ## Response variable: _`r target`_
 
 These are the response variable classes including the number in each class that we want to predict. 
 ```{r,echo=FALSE}
-table(modDat[,target])
+table(modDat[, target])
 ```
 
 
@@ -78,8 +101,8 @@ _PERHAPS -- this should be another small function or sourced other options_
 ```{r}
 ## Defines the validation method
 resp <- makeResampleDesc("RepCV",     ## repeated cross fold
-                         folds = 10,   ## k-folds 5 or 10 as default.  Ideally all folds should be equal size.
-                         reps  = 5)   ## note this will mean 5 x 3 = 50 iterations through the data
+                         folds = 5,   ## k-folds 5 or 10 as default.  Ideally all folds should be equal size.
+                         reps  = 3)   ## note this will mean 5 x 3 iterations through the data
    ## note: 5 fold 3 repeats is a little low.  I would prefer 10 x 10 but that takes additional time...
 
 ## Execute cross validation
@@ -152,7 +175,7 @@ Congratulations your model has been generated.
 Files are saved: 
 
 ```{r, echo = FALSE}
-outDir <- "e:/tmp/model_gen_test/"
+# outDir <- "e:/tmp/model_gen_test/" ## Testing
 fn <- as.data.frame(list.files(outDir, full.names = TRUE))
 names(fn) <- "Files"
 knitr::kable(fn)
