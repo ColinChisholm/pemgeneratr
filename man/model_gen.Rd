@@ -12,7 +12,7 @@ model_gen(traindat, target, outDir = ".", rseed = NA)
 \item{target}{The name of the response variable in the traindat data frame.}
 
 \item{outDir}{Highly recommended to be set as an absolute directory.  This defaults to the project's root directory OR where the RMD script is saved.
-Additional products generated from the associated<tt>model_gen.Rmd</tt> markdown script will also be saved to this dir.}
+Additional products generated from the associated `model_gen.Rmd`` markdown script will also be saved to this dir.}
 
 \item{rseed}{Optional random number seed.}
 }

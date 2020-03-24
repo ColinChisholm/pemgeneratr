@@ -7,7 +7,7 @@
 predict_landscape(model, cov, tilesize = 500, outDir = "./predicted")
 }
 \arguments{
-\item{model}{A \code{mlr} model object}
+\item{model}{Location of a \code{mlr} model object (i.e. path to it.)}
 
 \item{cov}{A list of raster files.  These will be loaded as a \code{stars} object}
 
