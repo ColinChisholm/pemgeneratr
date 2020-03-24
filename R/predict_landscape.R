@@ -7,7 +7,7 @@
 #' **Action** _is there a bug in tilemaker or with stars causing a xy offset error.
 #' Solution is currently a hack.  See `load tile area`.
 #'
-#' @param model A `mlr` model object
+#' @param model Location of a `mlr` model object (i.e. path to it.)
 #' @param cov   A list of raster files.  These will be loaded as a `stars` object
 #' @param tilesize Specify the number of pixels in the `x` and `y` directions for the tiles to be generated.  If your computer is mememory limited use a smaller tile (e.g. 500).
 #' @param outDir directory for the output file.
