@@ -84,15 +84,24 @@ predict_landscape <- function(model, cov,tilesize = 500,
         ## * convert tile to dataframe ---------
         rsf <- sf::st_as_sf(r, as_points = TRUE)
         # rsf <- na.omit(rsf)  ## na.omit caused issues
-        rsf[is.na(rsf)] <- 0 ## rather provide a zero value
+
 
         ## * predict ---------
 
-        if (nrow(rsf) == 0) {
+        if (sum(!is.na(rsf)) == 0) { ## if all the values in the tile are NA skip to next tile.
           print("... Empty tile moving to next...")
         } else {
+        ## When some of the values are NA change them to zero
+        rsf_bk <- rsf  ## create a backup of rsf -- this will be used to restore NA values
+        rsf[is.na(rsf)] <- 0 ## convert NA to zero as the predict function cannot handle NA
+
         print("... modelling outcomes (predicting)...")
         pred <- predict(mod, newdata = rsf)
+
+        ## Restore NA values
+        pred_dat <- pred$data ## predicted values extracted then changed
+        pred_dat[is.na(rsf_bk[,1]), 1:length(pred_dat)] <- NA ## if originally NA restore NA
+        pred$data <- pred_dat ## values restored to pred -- allows for cbind without issue.
 
         ## * geo-link predicted values ---------
         r_out <- cbind(rsf, pred)
@@ -103,6 +112,19 @@ predict_landscape <- function(model, cov,tilesize = 500,
         keep <- keep[-length(keep)] ## drops the last entry (geometry field, not a name)
 
         r_out <- r_out %>% dplyr::select(keep)
+
+
+        ## Save the names of the model response -----
+        ## The levels are in the multiclass 'response'
+        wkey <- 0
+        if (wkey == 0)  {
+          respNames <- levels(r_out$response) ## this becomes the dictionary to describe the raster values
+          write.csv(respNames, paste(outDir, "response_names.csv",
+                                     sep = "/"),
+                    row.names = TRUE)
+          wkey <- 1 ## Change this value so this small is statement does not execute again.
+        }
+
 
 
         ## change the text values to numeric values.
@@ -137,12 +159,7 @@ predict_landscape <- function(model, cov,tilesize = 500,
     print("All predicted tiles generated")
 
 
-    ## Save the names of the model response -----
-    ## The levels are in the multiclass
-    respNames <- levels(r_out$response) ## this becomes the dictionary to describe the raster values
-    write.csv(respNames, paste(outDir, "response_names.csv",
-                               sep = "/"),
-              row.names = FALSE)
+
 
 
     ## Mosaic Tiles ---------------
