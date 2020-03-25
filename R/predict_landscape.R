@@ -86,11 +86,14 @@ predict_landscape <- function(model, cov,tilesize = 500,
         # rsf <- na.omit(rsf)  ## na.omit caused issues
 
 
-        ## * predict ---------
 
-        if (sum(!is.na(rsf)) == 0) { ## if all the values in the tile are NA skip to next tile.
+      ## * Test if tile is empty  -------
+        naTest <- as.data.frame(rsf[,1])
+        naTest <- naTest[,1]
+        if (sum(!is.na(naTest)) == 0) { ## if all the values in the tile are NA skip to next tile.
           print("... Empty tile moving to next...")
         } else {
+      ## * predict ---------
         ## When some of the values are NA change them to zero
         rsf_bk <- rsf  ## create a backup of rsf -- this will be used to restore NA values
         rsf[is.na(rsf)] <- 0 ## convert NA to zero as the predict function cannot handle NA
