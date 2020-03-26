@@ -15,6 +15,7 @@
 #' - _pts2lines_ takes a sf POINT object and converts it to lines.
 #' _This is currently the only function available
 #' - _tracklog_ uses the tracklog and the sample points to generate the lines. _Not implemented yet_.
+#' @param sortby Field in the points data to sort the points by.  Defaults to  _"none"_ (i.e. assumes no sorting of data)
 #' @param tBuffer is optional with a default of 20m.  This is the buffer distance to place around the transect.  Waypoints outside this distance will not be considered.
 #' @param PROJ is an optional the epsg projection code with a default of BC Albers (3005).  Data imported will be transfored to this projection and final data will be exported in this projection.
 #' @keywords points, lines, convertion
@@ -23,83 +24,101 @@
 #' ## Convert GPS waypoints to line features (i.e. transect data)
 #' transects <- convert_pts2lines(gpsData, PlannedTransects)
 
-make_lines <- function(GPSPoints, Transects, method = "pts2lines", tBuffer = 20, PROJ = 3005) {
+make_lines <- function(GPSPoints, Transects, method = "pts2lines", sortby = "none", tBuffer = 20, PROJ = 3005) {
+
+    if (method == "pts2lines") {
+      ## Transects
+      planT <- Transects %>%
+        dplyr::mutate(TID = row_number()) %>%
+        # rename(TID = id)  %>% ## rename the id to not conflict with the GPS id field
+        sf::st_buffer(.,tBuffer) %>% dplyr::select(TID)
+
+      ## Transform data to PROJ
+      planT <- planT %>% sf::st_transform(PROJ)
+      GPSPoints <- GPSPoints %>% sf::st_transform(PROJ)
 
 
-  if (method == "pts2lines") {
-    ## Transects
-    planT <- Transects %>%
-      rename(TID = id)  %>% ## rename the id to not conflict with the GPS id field
-      st_buffer(.,tBuffer) %>% dplyr::select(TID)
+      ## Spatial join attributes
+      GPSPoints <- st_join(GPSPoints, planT)
 
-    ## Spatial join attributes
-    GPSPoints <- st_join(gpsData, planT)
-
-    ## TESTING
-    # PROJ <- 26910
-    # GPSPoints <- gpsData #%>% dplyr::select(name, time)
+      ## TESTING
+      # PROJ <- 26910
+      # GPSPoints <- gpsData #%>% dplyr::select(name, time)
 
 
-    ## f(n) start
-    ## ADD TRANSECT ID -- and the arrange TID, time
+      ## f(n) start
+      ## ADD TRANSECT ID -- and the arrange TID, time
+      ## Sort Data ---------
+      if (sortby != "none") {
+        ## converts the sortby character to a varibale call
+        sortField <- eval(parse(text = paste0("GPSPoints$", sortby)))
+        GPSPoints <- GPSPoints[order(sortField),]
 
-    GPSPoints <- GPSPoints %>% arrange(TID, time) %>%
-      rowid_to_column("ID") %>% # ID is needed table manipulation below
-      st_transform(PROJ)
+      }
 
-    ## convert GPSPoints to a table for manipulation
-    GPSPoints <- cbind(GPSPoints, st_coordinates(GPSPoints)) %>%
-      st_zm %>% as.data.frame()
-
-    ## this solves issue where geom is named 'geometry' other times 'geom'
-    if("geom" %in% names(GPSPoints)) {
-      GPSPoints <- GPSPoints %>% rename(geometry = geom)}
-
-    ## Define the Line Start and End Coordinates
-    lines <- GPSPoints %>%
-      mutate(Xend = lead(X),
-             Yend = lead(Y)) %>%  # collect the coordinates of the next point
-      filter(!is.na(Yend)) #%>% # drops the last row (start point with no end)
-    # dplyr::select(-geometry)
-
-    ## Use data.table with sf to create the line geometry
-    dt <- data.table::as.data.table(lines)
-    sf <- dt[,
-             {
-               geometry <- sf::st_linestring(x = matrix(c(X, Xend, Y, Yend), ncol = 2))
-               geometry <- sf::st_sfc(geometry)
-               geometry <- sf::st_sf(geometry = geometry)
-             }
-             , by = ID
-             ]
-
-    ## Replace the geometry
-    lines$geometry <- sf$geometry
-
-    ## Declare as a simple feature
-    lines <- st_sf(lines)
-    st_crs(lines) <- PROJ
+      GPSPoints <- GPSPoints %>%
+        rowid_to_column("ID") # ID is needed table manipulation below
 
 
-    ## Need to remove excess lines -- currently there are lines that run between the plots
-    lines$within <- as.logical(st_within(lines, planT))
-    lines <- lines[!is.na(lines$within == TRUE),]  ## removes lines not contained in Transect area
+      ## convert GPSPoints to a table for manipulation
+      GPSPoints <- cbind(GPSPoints, sf::st_coordinates(GPSPoints)) %>%
+        st_zm %>% as.data.frame()
+
+      ## this solves issue where geom is named 'geometry' other times 'geom'
+      if("geom" %in% names(GPSPoints)) {
+        GPSPoints <- GPSPoints %>%  dplyr::rename(geometry = geom)}
+
+      ## Define the Line Start and End Coordinates
+      ## Add XY coordinates as
+
+      lines <- GPSPoints %>%
+
+        dplyr::mutate(Xend = lead(X),
+                      Yend = lead(Y)) %>%  # collect the coordinates of the next point
+        dplyr::filter(!is.na(Yend)) #%>% # drops the last row (start point with no end)
+      # dplyr::select(-geometry)
+
+      ## Use data.table with sf to create the line geometry
+      dt <- data.table::as.data.table(lines)
+      sf <- dt[,
+               {
+                 geometry <- sf::st_linestring(x = matrix(c(X, Xend, Y, Yend), ncol = 2))
+                 geometry <- sf::st_sfc(geometry)
+                 geometry <- sf::st_sf(geometry = geometry)
+               }
+               , by = ID
+               ]
+
+      ## Replace the geometry
+      lines$geometry <- sf$geometry
+
+      ## Declare as a simple feature
+      lines <- st_sf(lines)
+      st_crs(lines) <- PROJ
 
 
-    ## There are a few invalid geometries
-    lines$valid <- as.logical(st_is_valid(lines))
-    lines <- lines[lines$valid == TRUE,]  ## removes lines not contained in Transect area
+      ## Need to remove excess lines -- currently there are lines that run between the plots
+      lines$within <- as.logical(st_within(lines, planT))
+      lines <- lines[!is.na(lines$within == TRUE),]  ## removes lines not contained in Transect area
 
-    lines <- lines %>% dplyr::select(TID, id, name, time, SiteSeries:Confidence)
 
-    return(lines)
+      ## There are a few invalid geometries
+      lines$valid <- as.logical(st_is_valid(lines))
+      # lines <- lines[lines$valid == TRUE,]  ## removes lines not contained in Transect area
 
-  } else {
-  ## Begin transect method ----------------------------------------------------
-  ## ADD MC's code here
-    if (method == "tracklog") {
-      print("Not built yet")
-      print("Copy in MC's code")
+      # lines <- lines %>% dplyr::select(TID, id, name, time, SiteSeries:Confidence)
+
+      return(lines)
+
+    } else {
+      ## Begin transect method ----------------------------------------------------
+      ## ADD MC's code here
+      if (method == "tracklog") {
+        print("Not built yet")
+        print("Copy in MC's code")
+      }
     }
   }
-}
+
+
+

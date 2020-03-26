@@ -8,6 +8,7 @@ make_lines(
   GPSPoints,
   Transects,
   method = "pts2lines",
+  sortby = "none",
   tBuffer = 20,
   PROJ = 3005
 )
@@ -27,6 +28,8 @@ This transect id will be named 'TID' in the output data.}
 _This is currently the only function available
 \item \emph{tracklog} uses the tracklog and the sample points to generate the lines. \emph{Not implemented yet}.
 }}
+
+\item{sortby}{Field in the points data to sort the points by.  Defaults to  \emph{"none"} (i.e. assumes no sorting of data)}
 
 \item{tBuffer}{is optional with a default of 20m.  This is the buffer distance to place around the transect.  Waypoints outside this distance will not be considered.}
 
