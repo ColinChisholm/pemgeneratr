@@ -53,7 +53,7 @@ predict_landscape <- function(model, cov,tilesize = 500,
     tiles <- pemgeneratr::tile_index(cov[1], tilesize)
 
     ## alternate -- outside of pemgeneratr
-    # source("./R/tile_index.R")  ## load the tile index function
+    # source(here::here('_functions', 'tile_index.R'))
     # tiles <- tile_index(cov[1], tilesize)
 
 
