@@ -9,7 +9,10 @@
 #' @keywords SAGA, covariates, predictors, raster
 #' @export
 #' @examples
-#' ## Load sf object
+#' ##
+#' cov_dtm(dtm,                          ## the dtm (loaded by raster() )
+#'         SAGApath = "C:/SAGA/"         ## specify location of SAGA on your machine
+#'         output   = "c:/dtm-derived" ) ## specify output folder
 
 
 cov_dtm <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters"){
