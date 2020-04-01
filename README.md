@@ -1,6 +1,6 @@
 <center>
 <h1>
-`PEMgeneratr`
+`pemgeneratr`
 </h1>
 </center>
 
