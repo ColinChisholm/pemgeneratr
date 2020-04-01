@@ -223,7 +223,7 @@ setwd(rtnwd)
 
 
   ## TEST paramaters
-  output <- "e:/tmp"
+  # output <- "e:/tmp"
 
   tmpFiles <- paste(output, "saga", sep = "/")
   l <- list.files(path = tmpFiles, pattern = "*.sdat")
