@@ -9,7 +9,7 @@ params:
 ---
 
 
-  
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, cache=FALSE,
@@ -26,7 +26,7 @@ library(tidyverse)
 ## Load the data
 modDat <- params$traindat
 target <- params$target
-          
+
 ## define output directory
 outDir <- params$outDir
 ```
@@ -55,35 +55,35 @@ outDir <- params$outDir
 
 ## Response variable: _`r target`_
 
-These are the response variable classes including the number in each class that we want to predict. 
+These are the response variable classes including the number in each class that we want to predict.
 ```{r,echo=FALSE}
 table(modDat[, target])
 ```
 
 
-## Begin modeling 
+## Begin modeling
 
 
 ### Define the Task and Learner
 
-_PERHAPS -- this should be another small function or sourced other options_ 
+_PERHAPS -- this should be another small function or sourced other options_
 
 ```{r, echo=FALSE}
 ## use or create a random number seed -- this can be used to repeat results in future.
 if (!is.na(rseed)) {
-  set.seed(rseed) 
+  set.seed(rseed)
   print(paste("Random number generator seed set to:", rseed))
   } else {
   rseed <- as.integer(Sys.time())
   print(paste("Random number generator seed set to:", rseed))
-} 
+}
 
 
 ```
 
 ```{r}
-## Create task 
-tsk <- makeClassifTask(data = modDat, target = "SiteSeries")
+## Create task
+tsk <- makeClassifTask(data = modDat, target = target)
 
 ## Define Learner
 lrn <- makeLearner("classif.ranger",
@@ -96,7 +96,7 @@ lrn <- makeLearner("classif.ranger",
 
 ### Complete repeated cross-fold validataion
 
-_PERHAPS -- this should be another small function or sourced other options_ 
+_PERHAPS -- this should be another small function or sourced other options_
 
 ```{r}
 ## Defines the validation method
@@ -118,7 +118,7 @@ saveRDS(cv, file = paste(outDir, "cv_results.rds", sep = "/"))
 The mean mis-classification error is **`r mean(cv$measures.test$mmce)`**.
 
 
-#### Confusion Matrices 
+#### Confusion Matrices
 
 ```{r}
 cf_matrix <- calculateConfusionMatrix(cv$pred,
@@ -150,7 +150,7 @@ knitr::kable(round(cf_matrix$relative.row, 2))
 
 ### Train the model
 
-The model is trained using all the data and then saved. 
+The model is trained using all the data and then saved.
 ```{r}
 mod <- train(lrn, tsk)
 
@@ -170,9 +170,9 @@ knitr::kable(var_imp %>% arrange(desc(VaribleImportance)) %>% head(., 20))
 
 ## Complete
 
-Congratulations your model has been generated. 
+Congratulations your model has been generated.
 
-Files are saved: 
+Files are saved:
 
 ```{r, echo = FALSE}
 # outDir <- "e:/tmp/model_gen_test/" ## Testing
@@ -180,5 +180,3 @@ fn <- as.data.frame(list.files(outDir, full.names = TRUE))
 names(fn) <- "Files"
 knitr::kable(fn)
 ```
-
-
