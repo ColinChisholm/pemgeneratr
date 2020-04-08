@@ -173,6 +173,10 @@ predict_landscape <- function(model, cov,tilesize = 500,
       r_tiles <- list.files(paste(outDir, k, sep = "/"),
                             pattern = ".tif",
                             full.names = TRUE)
+      # remove pot. xml files
+      r_tiles <- r_tiles[-(grep(r_tiles, pattern = "xml"))] ## drop any associated xml files
+
+
       ## mosaic
       gdalUtils::mosaic_rasters(gdalfile = r_tiles, ## list of rasters to mosaic
                                 dst_dataset = paste0(outDir, "/", k, ".tif"),  #output: dir and filename
