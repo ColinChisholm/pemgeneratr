@@ -15,19 +15,19 @@
 #' @export
 #' @examples
 #' ### Testing
-#' cov <- list.files("e:/tmpGIS/PEM_cvs/", pattern = "*.tif",full.names = TRUE)
-#' cov <- cov[-(grep(cov, pattern = "xml"))]
+#` cov <- list.files("e:/tmpGIS/PEM_cvs/", pattern = "*.tif",full.names = TRUE)
+#` cov <- cov[-(grep(cov, pattern = "xml"))]
 #'
-#' predict_landscape(model = "e:/tmp/model_gen_test/model.rds",
-#'                   cov = cov,
-#'                   tilesize = 1000,
-#'                   outDir = "e:/tmp/predict_landscape")
+# predict_landscape(model = "e:/tmp/model_gen_test/model.rds",
+#'                  cov = cov,
+#'                  tilesize = 1000,
+#'                  outDir = "e:/tmp/predict_landscape")
 
 predict_landscape <- function(model, cov,tilesize = 500,
                               outDir = "./predicted") {
   ## libraries  -----
-    library(dplyr)
-    library(mlr)
+  library(dplyr)
+  library(mlr)
 
   ## Adjust names
   ## This will be used in the loop to rename stars object
@@ -46,7 +46,22 @@ predict_landscape <- function(model, cov,tilesize = 500,
     print("Name mis-match between the model features and the names of the rasters.")
     print("The following raster co-variates are not found in the model features list:")
     print(setdiff(mod$features, n))
+
+    print("the following raster ")
   } else {
+
+    ## drop rasters if not included in model
+    if (length(setdiff(n, mod$features) > 0 )) {
+    print("The following rasters are removed as they were not included in the model:")
+    print(setdiff(n, mod$features))
+
+    ## drop layers not used
+    drop_layers <- paste0(setdiff(n, mod$features), ".tif")
+    cov <- subset(cov, !(basename(cov) %in% drop_layers) )
+    n <- basename(cov) ; n <- gsub(".tif", "", n)  ## fix n
+    }
+
+
     dir.create(outDir) ## create output dir -----------
 
     ## create tiles ---------------
@@ -65,44 +80,62 @@ predict_landscape <- function(model, cov,tilesize = 500,
 
 
     for (i in 1:nrow(tiles)) {    ## testing first 2 tiles       ##nrow(tiles)) {
-        t <- tiles[i,]  ## get tile
-        print(paste("working on ", i, "of", nrow(tiles)))
-        print("...")
+      t <- tiles[i,]  ## get tile
+      print(paste("working on ", i, "of", nrow(tiles)))
+      print("...")
 
 
-        ## * load tile area---------
-        print("... loading new data (from rasters)...")
-        r <- stars::read_stars(cov,
-                        RasterIO = list(nXOff  = t$offset.x[1]+1, ## hack -- stars and tile_maker issue??
-                                        nYOff  = t$offset.y[1]+1,
-                                        nXSize = t$region.dim.x[1],
-                                        nYSize = t$region.dim.y[1]))
+      ## * load tile area---------
+      print("... loading new data (from rasters)...")
+      r <- stars::read_stars(cov,
+                             RasterIO = list(nXOff  = t$offset.x[1]+1, ## hack -- stars and tile_maker issue??
+                                             nYOff  = t$offset.y[1]+1,
+                                             nXSize = t$region.dim.x[1],
+                                             nYSize = t$region.dim.y[1]))
 
-        ## * update names ---------
-        names(r) <- n
+      ## * update names ---------
+      names(r) <- n
 
-        ## * convert tile to dataframe ---------
-        rsf <- sf::st_as_sf(r, as_points = TRUE)
-        # rsf <- na.omit(rsf)  ## na.omit caused issues
+      ## * convert tile to dataframe ---------
+      rsf <- sf::st_as_sf(r, as_points = TRUE)
+      # rsf <- na.omit(rsf)  ## na.omit caused issues
 
+      ## * Test if tile is empty -------------
+      na_table <- as.data.frame(sapply(rsf, function(x) all(is.na(x))))
+      ## * determine na counts -- this will be used to restore NA values if tile is run.
+      na_table$count <- as.data.frame(sapply(rsf, function(x) sum(is.na(x))))[,1]
 
+      ## If any attribute is empty skip the tile
+      if(any(na_table[,1] == TRUE)) {
 
-      ## * Test if tile is empty  -------
-        naTest <- as.data.frame(rsf[,1])
-        naTest <- naTest[,1]
-        if (sum(!is.na(naTest)) == 0) { ## if all the values in the tile are NA skip to next tile.
-          print("... Empty tile moving to next...")
-        } else {
-      ## * predict ---------
+        print("some variables with all NA values, skipping tile")
+
+      } else{
+
+        ## * Test if tile is empty -- original version
+        # naTest <- as.data.frame(rsf[,1])
+        # naTest <- naTest[,1]
+        # if (sum(!is.na(naTest)) == 0) { ## if all the values in the tile are NA skip to next tile.
+        #   print("... Empty tile moving to next...")
+        # } else {
+
+        ## * predict ---------
+
+        ## * * Managing NA values ----------------
         ## When some of the values are NA change them to zero
-        rsf_bk <- rsf  ## create a backup of rsf -- this will be used to restore NA values
+        ## * Identify the attribute with the highest number of NA values.
+        na_max <- na_table[na_table$count ==  max(na_table$count),]
+        na_max <- row.names(na_max[1,]) ## if multiple attributes -- take the first
+
+        ## make a copy of the attribute with the highest number of na values
+        rsf_bk <- rsf[,na_max]  ## -- this will be used to restore NA values
         rsf[is.na(rsf)] <- 0 ## convert NA to zero as the predict function cannot handle NA
 
         print("... modelling outcomes (predicting)...")
         pred <- predict(mod, newdata = rsf)
 
         ## Restore NA values
-        pred_dat <- pred$data ## predicted values extracted then changed
+        pred_dat <- pred$data ## predicted values extracted
         pred_dat[is.na(rsf_bk[,1]), 1:length(pred_dat)] <- NA ## if originally NA restore NA
         pred$data <- pred_dat ## values restored to pred -- allows for cbind without issue.
 
@@ -145,7 +178,7 @@ predict_landscape <- function(model, cov,tilesize = 500,
         for (j in 1:length(keep)) {
           # j <- 2  ## testing
           out <- stars::st_rasterize(r_out[j],
-                                       template = r[1])
+                                     template = r[1])
           stars::write_stars(out,
                              paste0(outDir,"/",
                                     keep[j], "/",             #sub-directoy
@@ -157,8 +190,8 @@ predict_landscape <- function(model, cov,tilesize = 500,
         print(paste(round(a/ta*100,1), "% complete"))
         print("") ## blank line
 
-        } ## end if statement -- for when tile is empty
-        } ## END LOOP -------------
+      } ## end if statement -- for when tile is empty
+    } ## END LOOP -------------
     print("All predicted tiles generated")
 
 
