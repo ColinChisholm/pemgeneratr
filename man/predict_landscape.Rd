@@ -26,13 +26,10 @@ Solution is currently a hack.  See \verb{load tile area}.
 }
 \examples{
 ### Testing
-cov <- list.files("e:/tmpGIS/PEM_cvs/", pattern = "*.tif",full.names = TRUE)
-cov <- cov[-(grep(cov, pattern = "xml"))]
 
-predict_landscape(model = "e:/tmp/model_gen_test/model.rds",
-                  cov = cov,
-                  tilesize = 1000,
-                  outDir = "e:/tmp/predict_landscape")
+                 cov = cov,
+                 tilesize = 1000,
+                 outDir = "e:/tmp/predict_landscape")
 }
 \keyword{landscape}
 \keyword{predict,}
