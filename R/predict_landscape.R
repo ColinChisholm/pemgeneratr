@@ -66,7 +66,7 @@ predict_landscape <- function(model, cov,tilesize = 500,
     ifelse(!dir.exists(outDir), dir.create(outDir, recursive = TRUE), print("model folder already exists"))
 
     ## alternate -- outside of pemgeneratr
-    source(here::here('_functions', 'tile_index.R'))
+    # source(here::here('_functions', 'tile_index.R'))
 
 
     ## create tiles ---------------
