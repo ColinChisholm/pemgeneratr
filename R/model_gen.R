@@ -7,9 +7,10 @@
 #'
 #'
 #' @param outDir  Highly recommended to be set as an absolute directory.  This defaults to the project's root directory OR where the RMD script is saved.
-#' Additional products generated from the associated `model_gen.Rmd`` markdown script will also be saved to this dir.
+#' Additional products generated from the associated `model_gen_XXX.Rmd`` markdown scripts will also be saved to this dir.
 #' @param traindat Is a dataframe that contains the model training data.  The reponse variable should be one of the columns.
 #' @param target   The name of the response variable in the traindat data frame.
+#' @param modelType **rF** for a `ranger` random forest; **esb** for an `ensemble` of `ranger`, `glmnet`, `xgboost`, and `nnTrain``; _others to be added_.  This acts as a suffix for whcih model_gen_XXX.Rmd to call.
 #' @param rseed    Optional random number seed.
 #' @keywords machine-learning, model, report
 #' @export
