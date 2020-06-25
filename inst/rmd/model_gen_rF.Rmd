@@ -1,5 +1,5 @@
 ---
-title: "Machine Learning Model"
+title: "Machine Learning Model Using Ranger"
 output: html_document
 params:
   outDir: "."

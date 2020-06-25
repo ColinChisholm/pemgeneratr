@@ -10,7 +10,7 @@
 #' Additional products generated from the associated `model_gen_XXX.Rmd`` markdown scripts will also be saved to this dir.
 #' @param traindat Is a dataframe that contains the model training data.  The reponse variable should be one of the columns.
 #' @param target   The name of the response variable in the traindat data frame.
-#' @param modelType **rF** for a `ranger` random forest; **esb** for an `ensemble` of `ranger`, `glmnet`, `xgboost`, and `nnTrain``; _others to be added_.  This acts as a suffix for whcih model_gen_XXX.Rmd to call.
+#' @param mType **rF** for a `ranger` random forest; **esb** for an `ensemble` of `ranger`, `glmnet`, `xgboost`, and `nnTrain``; _others to be added_.  This acts as a suffix for whcih model_gen_XXX.Rmd to call.
 #' @param rseed    Optional random number seed.
 #' @keywords machine-learning, model, report
 #' @export
@@ -25,7 +25,7 @@
 #'           rseed = 456)
 
 
-model_gen <- function(traindat, target, outDir = ".", rseed = NA) {
+model_gen <- function(traindat, target, mType = "rF", outDir = ".", rseed = NA) {
   ## create destination folder
   ifelse(!dir.exists(file.path(outDir)),                # if folder does not exist
           dir.create(file.path(outDir)), FALSE)         # create it
@@ -45,7 +45,9 @@ model_gen <- function(traindat, target, outDir = ".", rseed = NA) {
   }
 
   ## call report -- passing variables to it --------------
-  RMD <- system.file("rmd", "model_gen.Rmd", package = "pemgeneratr") ## this syntax designed for a package install.
+  RMD <- system.file("rmd",
+                     paste0("model_gen_", mType, ".Rmd"), ## note calls mType -- to specify the type of model to use
+                     package = "pemgeneratr") ## this syntax designed for a package install.
   # RMD <- "./R/model_gen.Rmd"  ## manually set for sourcing this function
 
   rmarkdown::render(RMD,              ## where the rmd is located

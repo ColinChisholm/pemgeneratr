@@ -1,0 +1,238 @@
+---
+title: "Machine Learning Ensemble Model"
+subtitle: "Using ranger, glmnet, xgboost, and nnTrain"
+output: html_document
+params:
+  outDir: outDir
+  traindat: traindat
+  target: target
+  rseed: NA
+---
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=FALSE,
+                      warning = FALSE, message = FALSE,
+                      results = 'show',
+                      eval = TRUE)  ## flag eval = false for quick text edits
+```
+
+```{r, echo=FALSE}
+# install.packages("mlr", dependencies = TRUE)
+library(mlr)
+library(tidyverse)
+
+## Load the data
+modDat <- params$traindat
+target <- params$target
+
+## define output directory
+outDir <- params$outDir
+```
+
+<!-- # _Testing_ -->
+<!-- ```{r} -->
+<!-- `%notin%` <- Negate(`%in%`) -->
+
+<!-- ## Load the data -->
+<!-- modDat <- sf::st_read("e:/workspace/2020/PEM/ALRF_PEMv2/spatialData/SamplePoints_with_rast_values.gpkg", -->
+<!--   quiet = TRUE) %>% -->
+<!--   dplyr::select(SiteSeries, aspect_025:VerticalDistance_25m) %>% -->
+<!--   dplyr::select(-c(Vertical_distance_025:VerticalDistance_25m,   ## remove problematic covariates -->
+<!--                    overland_flow_025:OverlandFlowDistance_25m)) %>% -->
+<!--   as.data.frame() -->
+<!-- modDat <- modDat[, -length(modDat)] -->
+<!-- modDat <- modDat[!is.na(modDat$SiteSeries),] -->
+
+
+<!-- ## simplify testing data -- samples with low frequency need to be dropped -- mucks up validation -->
+<!-- remove <- sort(unique(modDat$SiteSeries)) %>% as.character() -->
+<!-- remove <- remove[c(1,4,5, 15, 17)] -->
+
+<!-- modDat <- modDat[modDat$SiteSeries %notin% remove, ] -->
+<!-- modDat$SiteSeries <- droplevels(modDat$SiteSeries) -->
+
+<!-- table(modDat$SiteSeries) -->
+
+
+<!-- target <- "SiteSeries" -->
+
+<!-- ## define output directory -->
+<!-- outDir <- "e:/tmp/mlr_ensemble_200624" -->
+<!-- rseed <- NA -->
+<!-- ``` -->
+
+
+
+
+
+## Response variable: _`r target`_
+
+These are the response variable classes including the number in each class that we want to predict.
+```{r,echo=FALSE}
+table(modDat[, target])
+```
+
+
+## Begin modeling
+
+
+### Define the Task and Learner
+
+```{r, echo=FALSE}
+## use or create a random number seed -- this can be used to repeat results in future.
+if (!is.na(rseed)) {
+  set.seed(rseed)
+  print(paste("Random number generator seed set to:", rseed))
+  } else {
+  rseed <- as.integer(Sys.time())
+  print(paste("Random number generator seed set to:", rseed))
+}
+
+
+```
+
+```{r}
+## Create task
+tsk <- makeClassifTask(data = modDat, target = target)
+
+## Define Learner -- here we create an ensemble learner
+esbLrns <- c("classif.ranger", "classif.glmnet", "classif.xgboost", "classif.nnTrain")
+
+## Creates a list of learners using producing probability
+lrns <- list(mlr::makeLearner(esbLrns[1]),
+            mlr::makeLearner(esbLrns[2]),
+            mlr::makeLearner(esbLrns[3], verbose=1),
+            mlr::makeLearner(esbLrns[4]))
+lrns <- lapply(lrns, setPredictType, "prob") ## use prob as the type 
+
+
+## converts the list of learners to a ensemble 
+lrn <- mlr::makeStackedLearner(base.learners = lrns, predict.type = "prob", 
+                               method = "stack.cv", 
+                               super.learner = "classif.glmnet")
+```
+
+### Complete Validataion
+
+This is done by creating a _test_ and _training_ data sets from the data provided.  Twenty percent of the data is set asside for testing (1 in 5). _Note the current script selects the 20% in a regualar sequence ... this should be changed to a random draw_.
+
+```{r, results='hide'}
+### Not working with Ensemble model -- this section is skipped.
+## Defines the validation method 
+# resp <- makeResampleDesc("RepCV",     ## repeated cross fold
+#                          folds = 10,   ## k-folds 5 or 10 as default.  Ideally all folds should be equal size.
+#                          reps  = 3)   ## note this will mean 5 x 3 iterations through the data
+#    ## note: 5 fold 3 repeats is a little low.  I would prefer 10 x 10 but that takes additional time...
+# 
+# ## Execute cross validation
+# cv <- mlr::resample(learner = lrn,
+#                resampling = resp)
+# 
+# saveRDS(cv, file = paste(outDir, "cv_results.rds", sep = "/"))
+#      task = tsk,
+#           
+
+
+## specified validation -- test and training sets 
+## seperate the test and training datasets 
+test <- seq(5, nrow(modDat), by = 5) ## create a sequence to select every 5th row 
+
+test.dat  <- modDat[test,]
+train.dat <- modDat[-test,]
+
+## define task, train, and then predict
+## task defined 
+train.tsk  <- mlr::makeClassifTask(data = train.dat,  
+                                   target = target) 
+
+## train 
+parallelMap::parallelStartSocket(parallel::detectCores()-1)
+  train.mod  <- mlr::train(lrn, train.tsk)              
+parallelMap::parallelStop()
+
+## Predict 
+pred <- predict(train.mod, newdata = test.dat)
+
+pred$data$truth <- test.dat[,1]
+  
+
+### performance metrics 
+val <- mlr::performance(pred, measures = list(acc,logloss))
+```
+
+#### Resampling results
+
+- Model accuracy is  **`r round(val[1],4)`**.
+- log loss is **`r round(val[2],4)`**.
+
+
+#### Confusion Matrices
+
+_not currently available ... _
+
+<!-- ```{r} -->
+<!-- cf_matrix <- calculateConfusionMatrix(pred$pred, -->
+<!--                                       relative = TRUE, -->
+<!--                                       sums = TRUE) -->
+<!-- ``` -->
+
+<!-- ##### Absolute matrix -->
+
+<!-- <div style = "font-size:10pt"> -->
+
+<!-- ```{r cf-matix, echo = FALSE} -->
+<!-- knitr::kable(cf_matrix$result) -->
+<!-- ``` -->
+
+<!-- </div> -->
+
+
+<!-- ##### Relative Matrix -->
+
+<!-- <div style = "font-size:10pt"> -->
+
+<!-- ```{r cf-matix-rel, echo=FALSE} -->
+<!-- knitr::kable(round(cf_matrix$relative.row, 2)) -->
+<!-- ``` -->
+
+<!-- </div> -->
+
+
+### Train the model
+
+The model is trained using all the data and then saved.
+```{r, results='FALSE'hide'}
+parallelMap::parallelStartSocket(parallel::detectCores()-1)
+  mod <- train(lrn, tsk)
+parallelMap::parallelStop()
+saveRDS(mod, paste(outDir, "model.rds", sep = "/"))
+```
+
+### Variable importance
+
+_not available for this type of model_
+
+```{r var-imp, echo=FALSE}
+# var_imp <- as.data.frame(mod$learner.model$variable.importance) %>%
+#     rownames_to_column()
+#   names(var_imp) <- c("name", "VaribleImportance")
+# 
+# knitr::kable(var_imp %>% arrange(desc(VaribleImportance)) %>% head(., 20))
+```
+
+
+## Complete
+
+Congratulations your model has been generated.
+
+Files are saved:
+
+```{r, echo = FALSE}
+# outDir <- "e:/tmp/model_gen_test/" ## Testing
+fn <- as.data.frame(list.files(outDir, full.names = TRUE))
+names(fn) <- "Files"
+knitr::kable(fn)
+```

@@ -1,6 +1,6 @@
 Package: pemgeneratr
 Title: Predictive Ecosystem Mapping
-Version: 0.0.0.90622
+Version: 0.0.0.90624
 Authors@R:
     person(given = "Colin",
            family = "Chisholm",
