@@ -35,7 +35,8 @@ library(raster)
 library(rgdal)
 library(tmap)
 
-library(PEMgeneratr) ## OUR NEW PACKAGE
+devtools::install_github("ColinChisholm/pemgeneratr")
+library(pemgeneratr) ## OUR NEW PACKAGE
 ```
 
 <!-- # Purpose -->
