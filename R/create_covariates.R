@@ -34,11 +34,11 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
 
 # OUTPUTS: ------------------------------------------------------------
     ifelse(!dir.exists(file.path(output)),              #if tmpOut Does not Exists
-           dir.create(file.path(output)), print("Directory Already Exisits"))        #create tmpOut
+           dir.create(file.path(output)), print("Directory Already Exists"))        #create tmpOut
 
     saga_tmp_files <- paste0(output,"/saga/")
     ifelse(!dir.exists(file.path(saga_tmp_files)),              #if tmpOut Does not Exists
-           dir.create(file.path(saga_tmp_files)), print("Directory Already Exisits"))        #create tmpOut
+           dir.create(file.path(saga_tmp_files)), print("Directory Already Exists"))        #create tmpOut
 
 
 
@@ -84,7 +84,8 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
 
     sinksFilled <- "Filled_sinks.sgrd"
     sysCMD <- paste(saga_cmd, "ta_preprocessor 5", "-ELEV" ,
-                    file.path(gsub("sdat","sgrd", sDTM)),
+                    #file.path(gsub("sdat","sgrd", sDTM)),
+                    sDTM,
                     "-FILLED", sinksFilled,
                     "-MINSLOPE ", 0.1
     )
@@ -100,10 +101,10 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #http://www.saga-gis.org/saga_tool_doc/2.2.2/ta_preprocessor_1.html
 
     sinksRoute <- "sinkroute.sgrd"
-    sinksRoute <- file.path(tmpOut, sinksRoute)
+    sinksRoute <- file.path(paste0(output, "/saga/", sinksRoute))  ##
 
     sysCMD <- paste(saga_cmd, "ta_preprocessor 1",
-                    "-ELEVATION" , file.path(gsub("sdat","sgrd", sDTM)),
+                    "-ELEVATION" , sDTM, #file.path(gsub("sdat","sgrd", sDTM)),
                     "-SINKROUTE", sinksRoute
 
     )
@@ -114,10 +115,10 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #http://www.saga-gis.org/saga_tool_doc/2.2.2/ta_preprocessor_2.html
 
     dem_preproc <- "dem_preproc.sgrd"
-    dem_preproc <- file.path(tmpOut, dem_preproc)
+    #dem_preproc <- file.path(paste0(output, "/saga/", dem_preproc))
 
     sysCMD <- paste(saga_cmd, "ta_preprocessor 2",
-                    "-DEM" , file.path(gsub("sdat","sgrd", sDTM)),
+                    "-DEM" , sDTM, #file.path(gsub("sdat","sgrd", sDTM)),
                     "-SINKROUTE", sinksRoute,
                     "-DEM_PREPROC", dem_preproc,
                     "-METHOD", 1,
@@ -131,17 +132,18 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
 
     # http://www.saga-gis.org/saga_tool_doc/7.2.0/ta_morphometry_0.html
     slope <- "slope.sgrd"
-    slope = file.path(tmpOut, slope)
+    # slope = file.path(paste0(output, "/saga/", slope))
     aspect <- "aspect.sgrd"
-    aspect = file.path(tmpOut, aspect)
+    # aspect = file.path(tmpOut, aspect)
     gencurve <- "gencurve.sgrd"
-    gencurve = file.path(tmpOut, gencurve)
+    # gencurve = file.path(tmpOut, gencurve)
     totcurve <- "totcurve.sgrd"
-    totcurve = file.path(tmpOut, totcurve)
+    # totcurve = file.path(tmpOut, totcurve)
 
 
     sysCMD <- paste(saga_cmd, "ta_morphometry 0", "-ELEVATION",
-                    file.path(gsub("sdat","sgrd", sDTM)),     # Input DTM
+                    # file.path(gsub("sdat","sgrd", sDTM)),     # Input DTM
+                    sDTM,
                     "-SLOPE", slope,
                     "-ASPECT", aspect,                     # Outputs
                     "-C_GENE", gencurve,
@@ -162,9 +164,10 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.2.0/ta_hydrology_0.html
 
     tCatchment <- "tCatchment.sgrd"
-    tCatchment = file.path(tmpOut, tCatchment)
+    # tCatchment = file.path(tmpOut, tCatchment)
     sysCMD <- paste(saga_cmd, "ta_hydrology 0", "-ELEVATION",
-                    file.path(gsub("sdat","sgrd", sDTM)),
+                    # file.path(gsub("sdat","sgrd", sDTM)),
+                    sDTM,
                     "-FLOW", tCatchment,                                    # Output
                     "-METHOD", 4                                            # Default Parameters
     )
@@ -185,12 +188,14 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     ##### >> 3a -- Total Catchment Area --------------------------------------
 
     tca <- "tca.sgrd"
-    tca <- file.path(tmpOut, tca)
+    # tca <- file.path(tmpOut, tca)
     flowlength4 <- "flowlength4.sgrd"
-    flowlength4 <- file.path(tmpOut, flowlength4)
+    # flowlength4 <- file.path(tmpOut, flowlength4)
 
     sysCMD <- paste(saga_cmd, "ta_hydrology 1",
-                    "-ELEVATION", file.path(gsub("sdat","sgrd", sDTM)),
+                    "-ELEVATION",
+                    sDTM,
+                    # file.path(gsub("sdat","sgrd", sDTM)),
                     "-FLOW", tca,
                     "-FLOW_LENGTH", flowlength4,
                     "-FLOW_UNIT", 1,
@@ -231,7 +236,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # this is a new parameter - not calculated for Deception
 
     sCatchment <- "sCatchment.sgrd"
-    sCatchment  = file.path(tmpOut, sCatchment)
+    # sCatchment  = file.path(tmpOut, sCatchment)
 
     sysCMD <- paste(saga_cmd, "ta_hydrology 19", "-DEM", sinksFilled,       # Input from 1
                     "-SCA", sCatchment,                                     # Output
@@ -247,8 +252,8 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
 
 
     twi <- "twi.sgrd"
-    twi = file.path(tmpOut, twi)
-    sCatchment = file.path(tmpOut, sCatchment) # or tca?
+    # twi = file.path(tmpOut, twi)
+    # sCatchment = file.path(tmpOut, sCatchment) # or tca?
 
 
     sysCMD <- paste(saga_cmd, "ta_hydrology 20",
@@ -266,7 +271,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # https://sourceforge.net/projects/saga-gis/files/SAGA%20-%20Documentation/SAGA%20Documents/SagaManual.pdf/download
 
     channelsNetwork <- "cnetwork.sgrd"
-    channelsNetwork = file.path(tmpOut, channelsNetwork)
+    # channelsNetwork = file.path(tmpOut, channelsNetwork)
 
     sysCMD <- paste(saga_cmd, "ta_channels 0",
                     "-ELEVATION", sinksFilled,     # Input from 1
@@ -285,8 +290,8 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
 
     hDistance <- "hdist.sgrd"
     vDistance  <- "vdist.sgrd"
-    hDistance = file.path(tmpOut, hDistance)
-    vDistance = file.path(tmpOut, vDistance)
+    # hDistance = file.path(tmpOut, hDistance)
+    # vDistance = file.path(tmpOut, vDistance)
 
     sysCMD <- paste(saga_cmd, "ta_channels 4",
                     "-ELEVATION", sinksFilled,   # Input from 1
@@ -304,8 +309,8 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
 
     hDistance <- "hdistnob.sgrd"
     vDistance  <- "vdistnob.sgrd"
-    hDistance = file.path(tmpOut, hDistance)
-    vDistance = file.path(tmpOut, vDistance)
+    # hDistance = file.path(tmpOut, hDistance)
+    # vDistance = file.path(tmpOut, vDistance)
 
     sysCMD <- paste(saga_cmd, "ta_channels 4",
                     "-ELEVATION", sinksFilled,   # Input from 1
@@ -342,12 +347,13 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     MRVBF <- "mrvbf.sgrd"
     MRRTF <- "mrrtf.sgrd"
 
-    MRVBF = file.path(tmpOut, MRVBF)
-    MRRTF  = file.path(tmpOut, MRRTF)
+    # MRVBF = file.path(tmpOut, MRVBF)
+    # MRRTF  = file.path(tmpOut, MRRTF)
 
     # use defaul parameters
     sysCMD <- paste(saga_cmd, "ta_morphometry 8", "-DEM",
-                    file.path(gsub("sdat","sgrd", sDTM)),
+                    # file.path(gsub("sdat","sgrd", sDTM)),
+                    sDTM,
                     "-MRVBF", MRVBF,
                     "-MRRTF", MRRTF,                       # Outputs
                     "-T_SLOPE", 16,
@@ -370,12 +376,13 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     MRVBF2 <- "mrvbf2.sgrd"
     MRRTF2 <- "mrrtf2.sgrd"
 
-    MRVBF2 = file.path(tmpOut, MRVBF2)
-    MRRTF2  = file.path(tmpOut, MRRTF2)
+    # MRVBF2 = file.path(tmpOut, MRVBF2)
+    # MRRTF2  = file.path(tmpOut, MRRTF2)
 
     #  Adjust parameters -  Option 2.
     sysCMD <- paste(saga_cmd, "ta_morphometry 8", "-DEM",
-                    file.path(gsub("sdat","sgrd", sDTM)),
+                    # file.path(gsub("sdat","sgrd", sDTM)),
+                    sDTM,
                     "-MRVBF", MRVBF2,
                     "-MRRTF", MRRTF2,
                     "-T_SLOPE", 10,
@@ -396,7 +403,8 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     MRRTF5 <- "mrrtf5.sgrd"
 
     sysCMD <- paste(saga_cmd, "ta_morphometry 8", "-DEM",
-                    file.path(gsub("sdat","sgrd", sDTM)),
+                    # file.path(gsub("sdat","sgrd", sDTM)),
+                    sDTM,
                     "-MRVBF", MRVBF5,
                     "-MRRTF", MRRTF5,
                     "-T_SLOPE", 64,
@@ -436,9 +444,10 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.2.0/ta_morphometry_16.html
 
     TRI <- "tri.sgrd"
-    TRI  = file.path(tmpOut, TRI)
+    # TRI  = file.path(tmpOut, TRI)
     sysCMD <- paste(saga_cmd, "ta_morphometry 16",
-                    "-DEM", file.path(gsub("sdat","sgrd", sDTM)),
+                    # "-DEM", file.path(gsub("sdat","sgrd", sDTM)),
+                    sDTM,
                     "-TRI", TRI,  # Output
                     "-MODE", 0,
                     "-RADIUS", 3.0,
@@ -451,9 +460,11 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.2.0/ta_morphometry_1.html
 
     convergence <- "convergence.sgrd"
-    convergence  = file.path(tmpOut, convergence)
+    # convergence  = file.path(tmpOut, convergence)
     sysCMD <- paste(saga_cmd, "ta_morphometry 1",
-                    "-ELEVATION ", file.path(gsub("sdat","sgrd", sDTM)),      # Input DTM
+                    "-ELEVATION ",
+                    # file.path(gsub("sdat","sgrd", sDTM)),      # Input DTM
+                    sDTM,
                     "-RESULT", convergence,                                 # Output
                     "-METHOD", 1,
                     "-NEIGHBOURS", 1                          # Parameters
@@ -465,11 +476,12 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.2.0/ta_lighting_5.html
 
     opos <- "open_pos.sgrd"
-    opos = file.path(tmpOut, opos)
+    # opos = file.path(tmpOut, opos)
     oneg <- "open_neg.sgrd"
-    oneg = file.path(tmpOut, oneg)
+    # oneg = file.path(tmpOut, oneg)
     sysCMD <- paste(saga_cmd, "ta_lighting 5", "-DEM",
-                    file.path(gsub("sdat","sgrd", sDTM)),
+                    # file.path(gsub("sdat","sgrd", sDTM)),
+                    sDTM,
                     "-POS", opos,
                     "-NEG", oneg,                               # Outputs
                     "-RADIUS", 1000,
@@ -485,7 +497,8 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
 
     dAH <- "dah.sgrd"
     sysCMD <- paste(saga_cmd, "ta_morphometry 12", "-DEM",
-                    file.path(gsub("sdat","sgrd", sDTM)), # Input DTM
+                    # file.path(gsub("sdat","sgrd", sDTM)), # Input DTM
+                    sDTM,
                     "-DAH", dAH,                                            # Output
                     "-ALPHA_MAX", 202.5                                     # Default Parameters
     )
@@ -496,10 +509,11 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.2.0/ta_morphometry_18.html
 
     tpi <- "tpi.sgrd"
-    tpi= file.path(tmpOut, tpi)
+    # tpi= file.path(tmpOut, tpi)
 
     sysCMD <- paste(saga_cmd, "ta_morphometry 18", "-DEM",
-                    file.path(gsub("sdat","sgrd", sDTM)),# Input DTM
+                    # file.path(gsub("sdat","sgrd", sDTM)),# Input DTM
+                    sDTM,
                     "-TPI", tpi,                                            # Output
                     "-STANDARD", 0,
                     "-RADIUS_MIN", 0,
@@ -518,10 +532,10 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_channels_7.html
 
     val_depth = "val_depth.sgrd"
-    val_depth = file.path(tmpOut, val_depth)
+    # val_depth = file.path(tmpOut, val_depth)
 
     RidgeLevel = "rid_level.sgrd"
-    RidgeLevel = file.path(tmpOut, RidgeLevel)
+    # RidgeLevel = file.path(tmpOut, RidgeLevel)
 
     sysCMD = paste(saga_cmd, "ta_channels 7",
                    "-ELEVATION", sinksFilled,            # input DEM
@@ -540,11 +554,11 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_23.html
 
     MRNCatchment = "mnr_area.sgrd"
-    MRNCatchment = file.path(tmpOut, MRNCatchment)
+    # MRNCatchment = file.path(tmpOut, MRNCatchment)
     MRNMaxHeight = "mnr_mheight.sgrd"
-    MRNMaxHeight = file.path(tmpOut, MRNMaxHeight)
+    # MRNMaxHeight = file.path(tmpOut, MRNMaxHeight)
     MRN = "mnr.sgrd"
-    MRN = file.path(tmpOut, MRN)
+    # MRN = file.path(tmpOut, MRN)
 
     sysCMD = paste(saga_cmd, "ta_hydrology 23",
                    "-DEM", sinksFilled,                 # input DEM
@@ -559,11 +573,11 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_2.html
 
     FlowAccumFT = "flow_accum_ft.sgrd"
-    FlowAccumFT = file.path(tmpOut, FlowAccumFT)
+    # FlowAccumFT = file.path(tmpOut, FlowAccumFT)
     MeanOvCatch = "MeanOvCatch.sgrd"
-    MeanOvCatch = file.path(tmpOut, MeanOvCatch)
+    # MeanOvCatch = file.path(tmpOut, MeanOvCatch)
     AccumMaterial = "AccumMaterial.sgrd"
-    AccumMaterial = file.path(tmpOut, AccumMaterial)
+    # AccumMaterial = file.path(tmpOut, AccumMaterial)
     sysCMD = paste(saga_cmd, "ta_hydrology 2",
                    "-ELEVATION", sinksFilled,            # input DEM
                    "-FLOW", FlowAccumFT,                 # output Flow Accumulation
@@ -580,7 +594,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_7.html
 
     SlopeLength = "slength.sgrd"
-    SlopeLength = file.path(tmpOut, SlopeLength)
+    # SlopeLength = file.path(tmpOut, SlopeLength)
     sysCMD = paste(saga_cmd, "ta_hydrology 7",
                    "-DEM", sinksFilled,             # input DEM
                    "-LENGTH", SlopeLength            # output Slope Length
@@ -593,7 +607,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_29.html
 
     FlowAccumP = "flow_accum_p.sgrd"
-    FlowAccumP = file.path(tmpOut, FlowAccumP)
+    # FlowAccumP = file.path(tmpOut, FlowAccumP)
     sysCMD = paste(saga_cmd, "ta_hydrology 29",
                    "-DEM", sinksFilled,                  # input DEM
                    "-FLOW", FlowAccumP,                  # output Flow Accumulation
@@ -608,13 +622,13 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #
 
     FlowAccumTD = "flow_accum_td.sgrd"
-    FlowAccumTD = file.path(tmpOut, FlowAccumTD)
+    # FlowAccumTD = file.path(tmpOut, FlowAccumTD)
     MeanOvCatchTD = "MeanOvCatchTD.sgrd"
-    MeanOvCatchTD = file.path(tmpOut, MeanOvCatchTD)
+    # MeanOvCatchTD = file.path(tmpOut, MeanOvCatchTD)
     AccumMaterialTD = "AccumMaterialTD.sgrd"
-    AccumMaterialTD = file.path(tmpOut, AccumMaterialTD)
+    # AccumMaterialTD = file.path(tmpOut, AccumMaterialTD)
     FlowPathLenTD = "FlowPathLenTD.sgrd"
-    FlowPathLenTD = file.path(tmpOut, FlowPathLenTD)
+    # FlowPathLenTD = file.path(tmpOut, FlowPathLenTD)
     sysCMD = paste(saga_cmd, "ta_hydrology 0",
                    "-ELEVATION", sinksFilled,                 # input DEM
                    "-FLOW", FlowAccumTD,                      # output Flow Accumulation
@@ -650,7 +664,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_27.html
 
     FlowPathLength = "max_fp_l.sgrd"
-    FlowPathLength = file.path(tmpOut, FlowPathLength)
+    # FlowPathLength = file.path(tmpOut, FlowPathLength)
     sysCMD = paste(saga_cmd, "ta_hydrology 27",
                    "-ELEVATION", sinksFilled,            # input DEM
                    "-DISTANCE", FlowPathLength,          # output Max Flow Path Length
@@ -664,7 +678,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_27.html
     #
     FlowPathLength = "max_fp_l1.sgrd"
-    FlowPathLength = file.path(tmpOut, FlowPathLength)
+    # FlowPathLength = file.path(tmpOut, FlowPathLength)
     sysCMD = paste(saga_cmd, "ta_hydrology 27",
                    "-ELEVATION", sinksFilled,            # input DEM
                    "-DISTANCE", FlowPathLength,          # output Max Flow Path Length
@@ -680,7 +694,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # NEW VARIABLE - not generated for Deception
     #
     FlowAccum = "slope_lts_fa.sgrd"
-    FlowAccum = file.path(tmpOut, FlowAccum)
+    # FlowAccum = file.path(tmpOut, FlowAccum)
     sysCMD = paste(saga_cmd, "ta_hydrology 26",
                    "-DEM", sinksFilled,               # input DEM
                    "-FLOW", FlowAccum,                # output Flow Accumulation
@@ -694,7 +708,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_22.html
 
     LSFactor = "ls_factor.sgrd"
-    LSFactor = file.path(tmpOut, LSFactor)
+    # LSFactor = file.path(tmpOut, LSFactor)
     sysCMD = paste(saga_cmd, "ta_hydrology 22",
                    "-SLOPE", slope,                # input Slope
                    "-AREA", tCatchment,            # input Catchment Area
@@ -716,7 +730,9 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     DifInsol <- "diffinso.sgrd"
 
     sysCMD <- paste(saga_cmd, "ta_lighting 2",
-                    "-GRD_DEM", file.path(gsub("sdat","sgrd", sDTM)),# Input DTM
+                    "-GRD_DEM",
+                    # file.path(gsub("sdat","sgrd", sDTM)),# Input DTM
+                    sDTM,
                     "-GRD_DIRECT", DirInsol,
                     "-GRD_DIFFUS", DifInsol,       # Outputs
                     "-SOLARCONST", 1367,
@@ -740,7 +756,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_21.html
 
     Convexity = "convexity.sgrd"
-    Convexity = file.path(tmpOut, Convexity)
+    # Convexity = file.path(tmpOut, Convexity)
     sysCMD = paste(saga_cmd, "ta_morphometry 21",
                    "-DEM", sinksFilled,                   # input DEM
                    "-CONVEXITY", Convexity,               # output Convexity
@@ -759,9 +775,9 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #### >> 26 -- Vertical Distance to Channel Network ------------- ## froze - maybe just very slow?
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_channels_3.html
     VertDistance = "vert_dis.sgrd"
-    VertDistance = file.path(tmpOut, VertDistance)
-    channelsNetwork = file.path(tmpOut, channelsNetwork)
-    sinksFilled
+    # VertDistance = file.path(tmpOut, VertDistance)
+    # channelsNetwork = file.path(tmpOut, channelsNetwork)
+    # sinksFilled
 
     sysCMD = paste(saga_cmd, "ta_channels 3",
                    "-ELEVATION", sinksFilled,            # input DEM
@@ -778,7 +794,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_24.html
 
     TCILow = "tci_low.sgrd"
-    TCILow = file.path(tmpOut, TCILow)
+    # TCILow = file.path(tmpOut, TCILow)
     sysCMD = paste(saga_cmd, "ta_hydrology 24",
                    "-DISTANCE", VertDistance,            # input Vertical Distance to Channel Network
                    "-TWI", twi,                          # input TWI
@@ -793,13 +809,13 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_15.html
 
     CatchmentArea = "swi_area.sgrd"
-    CatchmentArea = file.path(tmpOut, CatchmentArea)
+    # CatchmentArea = file.path(tmpOut, CatchmentArea)
     CatchmentSlope = "swi_slope.sgrd"
-    CatchmentSlope = file.path(tmpOut, CatchmentSlope)
+    # CatchmentSlope = file.path(tmpOut, CatchmentSlope)
     ModCatchmentArea = "swi_area_mod.sgrd"
-    ModCatchmentArea = file.path(tmpOut, ModCatchmentArea)
+    # ModCatchmentArea = file.path(tmpOut, ModCatchmentArea)
     TopoWetIndex = "swi_twi.sgrd"
-    TopoWetIndex = file.path(tmpOut, TopoWetIndex)
+    # TopoWetIndex = file.path(tmpOut, TopoWetIndex)
     sysCMD = paste(saga_cmd, "ta_hydrology 15",
                    "-DEM", sinksFilled,                 # input DEM
                    "-AREA", CatchmentArea,              # output Catchment Area
@@ -821,7 +837,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_27.html
 
     WindExp = "wind_exp_index.sgrd"
-    WindExp = file.path(tmpOut, WindExp)
+    # WindExp = file.path(tmpOut, WindExp)
     sysCMD = paste(saga_cmd, "ta_morphometry 27",
                    "-DEM", sinksFilled,                     # input DEM
                    "-EXPOSITION", WindExp,                  # output Wind Exposition Index
@@ -836,7 +852,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_20.html
 
     Texture = "texture.sgrd"
-    Texture = file.path(tmpOut, Texture)
+    # Texture = file.path(tmpOut, Texture)
     sysCMD = paste(saga_cmd, "ta_morphometry 20",
                    "-DEM", sinksFilled,                      # input DEM
                    "-TEXTURE", Texture,                      # output Terrain Surface Texture
@@ -853,7 +869,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #### >> 31 -- Morphometric Protection Index ----------------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_7.html
     Protection = "protection.sgrd"
-    Protection = file.path(tmpOut, Protection)
+    # Protection = file.path(tmpOut, Protection)
     sysCMD = paste(saga_cmd, "ta_morphometry 7",
                    "-DEM", sinksFilled,                        # input DEM
                    "-PROTECTION", Protection,                  # output Morphometric Protection Index
@@ -865,7 +881,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_17.html
 
     VRM = "vrm.sgrd"
-    VRM = file.path(tmpOut, VRM)
+    # VRM = file.path(tmpOut, VRM)
     sysCMD = paste(saga_cmd, "ta_morphometry 17",
                    "-DEM", sinksFilled,                      # input DEM
                    "-VRM", VRM,                              # output Vector Ruggedness Measure
@@ -880,7 +896,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #### >> 33 -- Mass Balance Index ----------------------------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_10.html
     MBI = "mbi.sgrd"
-    MBI = file.path(tmpOut, MBI)
+    # MBI = file.path(tmpOut, MBI)
     sysCMD = paste(saga_cmd, "ta_morphometry 10",
                    "-DEM", sinksFilled,                 # input DEM
                    "-HREL", VertDistance,               # input Vertical Distance to Channel Network
@@ -895,7 +911,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #### >> 34 -- Multi-Scale Topographic Position Index --------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_28.html
     TPI = "mscale_tpi.sgrd"
-    TPI = file.path(tmpOut, TPI)
+    # TPI = file.path(tmpOut, TPI)
     sysCMD = paste(saga_cmd, "ta_morphometry 28",
                    "-DEM", sinksFilled,                # input DEM
                    "-TPI", TPI,                        # output TPI
@@ -909,15 +925,15 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #### >> 35 -- Relative Heights and Slope Positions ----------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_14.html
     SlopeHeight = "slope_height.sgrd"
-    SlopeHeight = file.path(tmpOut, SlopeHeight)
+    # SlopeHeight = file.path(tmpOut, SlopeHeight)
     ValleyDepth = "ValleyDepth.sgrd" #don't need this as created above?
-    ValleyDepth = file.path(tmpOut, ValleyDepth)
+    # ValleyDepth = file.path(tmpOut, ValleyDepth)
     NormHeight = "norm_height.sgrd"
-    NormHeight = file.path(tmpOut, NormHeight)
+    # NormHeight = file.path(tmpOut, NormHeight)
     StandHeight = "stand_height.sgrd"
-    StandHeight = file.path(tmpOut, StandHeight)
+    # StandHeight = file.path(tmpOut, StandHeight)
     MSPosition = "ms_position.sgrd"
-    MSPosition = file.path(tmpOut, MSPosition)
+    # MSPosition = file.path(tmpOut, MSPosition)
     sysCMD = paste(saga_cmd, "ta_morphometry 14",
                    "-DEM", sinksFilled,                 # input DEM
                    "-HO", SlopeHeight,                  # output Slope Height
@@ -961,15 +977,15 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #### >> 37 -- Upslope and Downslope Curvature ---------------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_26.html
     LocalCurve = "local_curv.sgrd"
-    LocalCurve = file.path(tmpOut, LocalCurve)
+    # LocalCurve = file.path(tmpOut, LocalCurve)
     UpslopeCurve = "upslope_curv.sgrd"
-    UpslopeCurve = file.path(tmpOut, UpslopeCurve)
+    # UpslopeCurve = file.path(tmpOut, UpslopeCurve)
     LocalUpCurve = "local_upslope_curv.sgrd"
-    LocalUpCurve = file.path(tmpOut, LocalUpCurve)
+    # LocalUpCurve = file.path(tmpOut, LocalUpCurve)
     DownCurve = "down_curv.sgrd"
-    DownCurve = file.path(tmpOut, DownCurve)
+    # DownCurve = file.path(tmpOut, DownCurve)
     LocalDownCurve = "local_downslope_curv.sgrd"
-    LocalDownCurve = file.path(tmpOut, LocalDownCurve)
+    # LocalDownCurve = file.path(tmpOut, LocalDownCurve)
     sysCMD = paste(saga_cmd, "ta_morphometry 26",
                    "-DEM", sinksFilled,                         # input DEM
                    "-C_LOCAL", LocalCurve,                      # output Local Curvature
@@ -985,7 +1001,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
     #### >> 38 -- Steepest Slope (Slope Aspect and Curvature) --------
     # http://www.saga-gis.org/saga_tool_doc/7.2.0/ta_morphometry_0.html
     SteepestSlope <- "steepest_slope.sgrd"
-    SteepestSlope = file.path(tmpOut, SteepestSlope)
+    # SteepestSlope = file.path(tmpOut, SteepestSlope)
     sysCMD <- paste(saga_cmd, "ta_morphometry 0",
                     "-ELEVATION", sinksFilled,                              # input DEM
                     "-SLOPE", SteepestSlope,                                # output Steepest Slope
@@ -1003,7 +1019,7 @@ create_covariates <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters
 
     # http://www.saga-gis.org/saga_tool_doc/7.6.2/ta_hydrology_4.html
     UpslopeArea = "upslopearea.sgrd"
-    UpslopeArea = file.path(tmpOut, UpslopeArea)
+    # UpslopeArea = file.path(tmpOut, UpslopeArea)
     sysCMD = paste(saga_cmd, "ta_hydrology 4",
                    "-ELEVATION", sinksFilled,           # input DEM
                    "-AREA", UpslopeArea,                # output Upslope Area
@@ -1060,4 +1076,3 @@ setwd(rtnwd)
 ## Remove tmp saga files
   unlink(paste(output, "saga", sep = "/"), recursive = TRUE)
 }
-
