@@ -4,15 +4,17 @@
 \alias{model_gen}
 \title{Generate a machine learning model}
 \usage{
-model_gen(traindat, target, outDir = ".", rseed = NA)
+model_gen(traindat, target, mType = "rF", outDir = ".", rseed = NA)
 }
 \arguments{
 \item{traindat}{Is a dataframe that contains the model training data.  The reponse variable should be one of the columns.}
 
 \item{target}{The name of the response variable in the traindat data frame.}
 
+\item{mType}{\strong{rF} for a \code{ranger} random forest; \strong{esb} for an \code{ensemble} of \code{ranger}, \code{glmnet}, \code{xgboost}, and `nnTrain``; \emph{others to be added}.  This acts as a suffix for whcih model_gen_XXX.Rmd to call.}
+
 \item{outDir}{Highly recommended to be set as an absolute directory.  This defaults to the project's root directory OR where the RMD script is saved.
-Additional products generated from the associated `model_gen.Rmd`` markdown script will also be saved to this dir.}
+Additional products generated from the associated `model_gen_XXX.Rmd`` markdown scripts will also be saved to this dir.}
 
 \item{rseed}{Optional random number seed.}
 }
