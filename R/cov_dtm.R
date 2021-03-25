@@ -33,11 +33,11 @@ cov_dtm <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters"){
 
 # OUTPUTS: ------------------------------------------------------------
     ifelse(!dir.exists(file.path(output)),              #if tmpOut Does not Exists
-           dir.create(file.path(output)), print("Directory Already Exisits"))        #create tmpOut
+           dir.create(file.path(output)), print("Directory Already Exists"))        #create tmpOut
 
     saga_tmp_files <- paste0(output,"/saga/")
     ifelse(!dir.exists(file.path(saga_tmp_files)),              #if tmpOut Does not Exists
-           dir.create(file.path(saga_tmp_files)), print("Directory Already Exisits"))        #create tmpOut
+           dir.create(file.path(saga_tmp_files)), print("Directory Already Exists"))        #create tmpOut
 
 
 
@@ -254,7 +254,7 @@ setwd(rtnwd)
 
     ifelse(!dir.exists(file.path(paste(output, subFolder, sep = "/"))),              #if tmpOut Does not Exists
            dir.create(file.path(paste(output, subFolder, sep = "/"))),
-           "Directory Already Exisits")        #create tmpOut
+           "Directory Already Exists")        #create tmpOut
 
     raster::writeRaster(r, outFile, overwrite = TRUE)  ## Saves at 25m resolution
 
@@ -264,4 +264,3 @@ setwd(rtnwd)
 ## Remove tmp saga files
   unlink(paste(output, "saga", sep = "/"), recursive = TRUE)
 }
-

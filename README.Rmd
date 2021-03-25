@@ -215,9 +215,9 @@ We are almost there! The Covariates have all been generated and they all have th
 
 
 
-## Prepare Covariate Raster Stack: `cv_FineRes`
+## Prepare Covariate Raster Stack: `cov_fineres`
 
-`cv_FineRes` uses `raster::disaggregate` on the coarse grained rasters are converted to fine grain for stacking.
+`cov_fineRes` uses `raster::disaggregate` on the coarse grained rasters are converted to fine grain for stacking.
 
 
 
