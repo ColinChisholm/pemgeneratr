@@ -40,7 +40,7 @@ create_covariates <- function(dtm, SAGApath = "",
 
 
 ####### flag all to run #######################
-if (layers == "all") {
+if (layers == "all") {  ## currently gives warning ... but functions as expected.
   layers <- options
 }
 
