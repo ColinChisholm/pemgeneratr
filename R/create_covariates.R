@@ -20,13 +20,23 @@
 #'         output   = "c:/dtm-derived" ) ## specify output folder
 
 
-create_covariates <- function(dtm, SAGApath = "C:/SAGA/",
+create_covariates <- function(dtm, SAGApath = "",
                               output = "./cv-rasters",
                               layers = "all"){
 
 
 ####### Options -- All the possible covariates ########
-  options <- c("A", "B", "C")
+  options <- c("Filled_sinks", "sinkroute", "dem_preproc", "slope_aspect_curve",
+               "tCatchment", "tca", "sCatchment", "twi", "channelsNetwork",
+               "Distance2Water", "MultiResFlatness", "MultiResFlatness2",
+               "MultiResFlatness3", "TRI", "convergence", "Openness",
+               "dah", "TPI", "RidgeValley", "MRN", "FlowAccumulation",
+               "SlopeLength", "FlowAccumulation2", "FlowAccumulation3",
+               "FlowPathLength", "FlowPathLength2", "FlowPathLength3", "LSFactor",
+               "SolarRad", "Convexity", "VertDistance", "TCI_low",
+               "SWI", "WindExp", "Texture", "Protection", "VRM",
+               "MBI", "mscale_TPI", "RelPosition", "SlopeCurvatures",
+               "SteepestSlope")
 
 
 ####### flag all to run #######################
@@ -102,7 +112,7 @@ if (length(err.layers) > 1) {
 
 ############################### BEGIN PROCESSING ###############################
 
-## ##### >> 1 -- Fill Sinks XXL (Wang and Liu)  -----------------------------
+####### >> 1 -- Fill Sinks XXL (Wang and Liu)  -----------------------------
 
     # Fill sinks in dem to prepare base DEM for other layers:
 
@@ -861,13 +871,17 @@ if ("Convexity" %in% layers) {
     system(sysCMD)
 }
 
+
+
+
+if ("VertDistance" %in% layers) {
+
     #### >> 26 -- Vertical Distance to Channel Network ------------- ## froze - maybe just very slow?
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_channels_3.html
     VertDistance = "vert_dis.sgrd"
     # VertDistance = file.path(tmpOut, VertDistance)
     # channelsNetwork = file.path(tmpOut, channelsNetwork)
     # sinksFilled
-#######CONTINUE HERE ################
     sysCMD = paste(saga_cmd, "ta_channels 3",
                    "-ELEVATION", sinksFilled,            # input DEM
                    "-CHANNELS", channelsNetwork,         # input Channel Network
@@ -876,11 +890,12 @@ if ("Convexity" %in% layers) {
                    "-NOUNDERGROUND", 1
     )
     system(sysCMD)
-
+}
 
 
     #### >> 27 -- TCI Low -------------------------------------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_24.html
+if ("TCI_low" %in% layers) {
 
     TCILow = "tci_low.sgrd"
     # TCILow = file.path(tmpOut, TCILow)
@@ -890,12 +905,13 @@ if ("Convexity" %in% layers) {
                    "-TCILOW", TCILow                     # output TCI Low
     )
     system(sysCMD)
-
+}
 
 
 
     #### >> 28 -- SAGA Wetness Index -------------------------------- ## works but VERY slow (~18 hours)
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_hydrology_15.html
+if ("SWI" %in% layers) {
 
     CatchmentArea = "swi_area.sgrd"
     # CatchmentArea = file.path(tmpOut, CatchmentArea)
@@ -919,11 +935,12 @@ if ("Convexity" %in% layers) {
                    "-SLOPE_WEIGHT", 1
     )
     system(sysCMD)
-
+}
 
 
     #### >> 29 -- Wind Exposition Index ------------------------------ ## works but VERY slow
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_27.html
+if ("WindExp" %in% layers) {
 
     WindExp = "wind_exp_index.sgrd"
     # WindExp = file.path(tmpOut, WindExp)
@@ -935,7 +952,10 @@ if ("Convexity" %in% layers) {
                    "-ACCEL", 1.5
     )
     system(sysCMD)
+}
 
+
+if ("Texture" %in% layers) {
 
     #### >> 30 -- Terrain Surface Texture -----------------------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_20.html
@@ -953,7 +973,10 @@ if ("Convexity" %in% layers) {
                    "-DW_BANDWIDTH", 1
     )
     system(sysCMD)
+}
 
+
+if ("Protection" %in% layers) {
 
     #### >> 31 -- Morphometric Protection Index ----------------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_7.html
@@ -965,6 +988,11 @@ if ("Convexity" %in% layers) {
                    "-RADIUS", 2000
     )
     system(sysCMD)
+}
+
+
+
+if ("VRM" %in% layers) {
 
     #### >> 32 -- Vector Ruggedness Measure ---------------------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_17.html
@@ -980,6 +1008,11 @@ if ("Convexity" %in% layers) {
                    "-DW_BANDWIDTH", 1
     )
     system(sysCMD)
+}
+
+
+
+if ("MBI" %in% layers) {
 
 
     #### >> 33 -- Mass Balance Index ----------------------------------
@@ -995,6 +1028,10 @@ if ("Convexity" %in% layers) {
                    "-THREL", 15
     )
     system(sysCMD)
+}
+
+
+if ("mscale_TPI" %in% layers) {
 
 
     #### >> 34 -- Multi-Scale Topographic Position Index --------------
@@ -1009,6 +1046,10 @@ if ("Convexity" %in% layers) {
                    "SCALE_NUM", 3
     )
     system(sysCMD)
+}
+
+
+if ("RelPosition" %in% layers) {
 
 
     #### >> 35 -- Relative Heights and Slope Positions ----------------
@@ -1035,6 +1076,11 @@ if ("Convexity" %in% layers) {
                    "-E", 2
     )
     system(sysCMD)
+}
+
+
+
+
 
 
     #### >> 36 -- Valley and Ridge Detection (Top Hat Approach) -------
@@ -1063,6 +1109,12 @@ if ("Convexity" %in% layers) {
     # )
     # system(sysCMD)
 
+
+
+
+
+if ("SlopeCurvatures" %in% layers) {
+
     #### >> 37 -- Upslope and Downslope Curvature ---------------------
     # http://www.saga-gis.org/saga_tool_doc/7.6.0/ta_morphometry_26.html
     LocalCurve = "local_curv.sgrd"
@@ -1085,7 +1137,11 @@ if ("Convexity" %in% layers) {
                    "-WEIGHTING", 0.5
     )
     system(sysCMD)
+}
 
+
+
+if ("SteepestSlope" %in% layers) {
 
     #### >> 38 -- Steepest Slope (Slope Aspect and Curvature) --------
     # http://www.saga-gis.org/saga_tool_doc/7.2.0/ta_morphometry_0.html
@@ -1100,7 +1156,12 @@ if ("Convexity" %in% layers) {
     )
     system(sysCMD)
 
+}
 
+
+
+
+if ("UpslopeArea" %in% layers) {
 
     # #### >> 39 -- Upslope Area -------------------------------------
 
@@ -1117,11 +1178,21 @@ if ("Convexity" %in% layers) {
     )
     system(sysCMD)
 
-setwd(rtnwd)
+
+}
+
+
+################ Covariate Generation Complete ####################
+
+
+
+
+
 
 #### Convert to GeoTif --------------------------------
-## Collect tmp saga file names
+setwd(rtnwd)
 
+## Collect tmp saga file names
 
   ## TEST paramaters
   # output <- "e:/tmp"

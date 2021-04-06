@@ -9,12 +9,21 @@ options <- c("Filled_sinks", "sinkroute", "dem_preproc", "slope_aspect_curve",
              "dah", "TPI", "RidgeValley", "MRN", "FlowAccumulation",
              "SlopeLength", "FlowAccumulation2", "FlowAccumulation3",
              "FlowPathLength", "FlowPathLength2", "FlowPathLength3", "LSFactor",
-             "SolarRad", "Convexity"
+             "SolarRad", "Convexity", "VertDistance", "TCI_low",
+             "SWI", "WindExp", "Texture", "Protection", "VRM",
+             "MBI", "mscale_TPI", "RelPosition", "SlopeCurvatures",
+             "SteepestSlope"
+
+
+             )
 
 
 
 
 ## Includes:
+
+_these are generated with one saga command.  Need to review as some of these are needed for the production of the desired layer where others the multiple outputs are desired._
+
 slope_aspect_curve  covers:   slope, aspect, gencurve, totcurve
 tca                 includes: flowlength4
 Distance2Water                hdist, vdist
@@ -28,9 +37,9 @@ MRN                           mnr_area, mnr_mheight, mnr
 FlowAccumulation              flow_accum_ft, MeanOvCatch, AccumMaterial,
 FlowAccumulation3             flow_accum_td, MeanOvCatchTD, AccumMaterialTD, FlowPathLenTD
 SolarRad                      direinso, diffinso
-
-
-
+SWI                           CatchmentArea, CatchmentSlope, ModCatchmentArea
+RelPosition                   slope_height, ValleyDepth, norm_height, stand_height, ms_position
+SlopeCurvatures               local_curv, upslope_curv, local_upslope_curv, down_curv, local_downslope_curv
 
 
 
@@ -53,7 +62,18 @@ FlowPathLength2       sinksFilled
 FlowPathLength3       sinksFilled
 LSFactor              tCatchment, sinksFilled,
 Convexity             sinksFilled
-
+VertDistance          sinksFilled, channelsNetwork
+TCI_low               twi, VertDistance
+SWI                   sinksFilled
+WindExp               sinksFilled
+Texture               sinksFilled
+Protection            sinksFilled
+VRM                   sinksFilled
+MBI                   sinksFilled, VertDistance
+mscale_TPI            sinksFilled
+RelPosition           sinksFilled
+SlopeCurvatures       sinksFilled
+SteepestSlope         sinksFilled
 
 
 ##Questions to discuss with Gen
