@@ -7,6 +7,7 @@
 #' Having the aoi set 100m break-points facilitates this.
 #'
 #' @param aoi is a sf object (e.g. polygon). The bounding box of the shape will be used to create rectangular shape.
+#' @param method Options are shrink or expand. Shrink will snap the aoi in to the nearest 100m, Expand will snap the aoi out to the nearest 100m. 
 #' @keywords AOI, polygon
 #' @export
 #' @examples
@@ -23,7 +24,7 @@
 #' ## 559600 5994900  560700 5995900
 
 
-aoi_snap <- function(aoi){
+aoi_snap <- function(aoi, method="shrink"){
   ## testing
   # setwd("e:/workspace/2019/PEM_2020/PEMWorkFlow/")
   # aoi <- sf::st_read("../data/Block_aoi.gpkg")
@@ -33,11 +34,21 @@ aoi_snap <- function(aoi){
   print("initial extent is:")
   print(bb)
 
+  if (method == "expand") {
   ## Generate expanded bbox -- expands to neared 100m
   xmin <- floor(bb$xmin / 100)*100
   xmax <- ceiling(bb["xmax"] / 100) * 100
   ymin <- floor(bb$ymin / 100)*100
   ymax <- ceiling(bb["ymax"] / 100) * 100
+
+  } else if (method == "shrink") {
+    
+  xmin <- round_any(bb$xmin, 100, f = ceiling)
+  xmax <- round_any(bb$xmax, 100, f = floor)
+  ymin <- round_any(bb$ymin, 100, f = ceiling)
+  ymax <- round_any(bb$ymax, 100, f = floor)
+    
+  }
 
   box <- matrix(c(xmin, ymin, xmin, ymax, xmax, ymax, xmax, ymin, xmin, ymin), ncol = 2, byrow = TRUE)
   box <- sf::st_polygon(list(box))
