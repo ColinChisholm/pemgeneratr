@@ -1,6 +1,6 @@
 Package: pemgeneratr
 Title: Predictive Ecosystem Mapping
-Version: 0.0.0.9210406
+Version: 0.0.0.9210430
 Authors@R:
     person(given = "Colin",
            family = "Chisholm",
@@ -16,8 +16,5 @@ Imports:
     magrittr,
     sf,
     raster,
-    rgdal,
-    GSIF,
-    SpaDES.tools,
-    mlr
+    rgdal
 Roxygen: list(markdown = TRUE)
