@@ -56,7 +56,7 @@ aoi_snap <- function(aoi, method="shrink"){
   box <- sf::st_as_sf(box)
 
   ## Report and Return
-  print("Expanded extent is:")
+  print("Extent is:")
   print(sf::st_bbox(box))
   return(box)
 
