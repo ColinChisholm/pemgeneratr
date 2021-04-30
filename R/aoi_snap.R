@@ -7,7 +7,7 @@
 #' Having the aoi set 100m break-points facilitates this.
 #'
 #' @param aoi is a sf object (e.g. polygon). The bounding box of the shape will be used to create rectangular shape.
-#' @param method Options are shrink or expand. Shrink will snap the aoi in to the nearest 100m, Expand will snap the aoi out to the nearest 100m. 
+#' @param method Options are shrink or expand. Shrink will snap the aoi in to the nearest 100m, Expand will snap the aoi out to the nearest 100m.
 #' @keywords AOI, polygon
 #' @export
 #' @examples
@@ -42,12 +42,12 @@ aoi_snap <- function(aoi, method="shrink"){
   ymax <- ceiling(bb["ymax"] / 100) * 100
 
   } else if (method == "shrink") {
-    
-  xmin <- round_any(bb$xmin, 100, f = ceiling)
-  xmax <- round_any(bb$xmax, 100, f = floor)
-  ymin <- round_any(bb$ymin, 100, f = ceiling)
-  ymax <- round_any(bb$ymax, 100, f = floor)
-    
+
+  xmin <- ceiling(bb$xmin / 100)*100
+  xmax <- floor(bb["xmax"] / 100) * 100
+  ymin <- ceiling(bb$ymin / 100)*100
+  ymax <- floor(bb["ymax"] / 100) * 100
+
   }
 
   box <- matrix(c(xmin, ymin, xmin, ymax, xmax, ymax, xmax, ymin, xmin, ymin), ncol = 2, byrow = TRUE)
