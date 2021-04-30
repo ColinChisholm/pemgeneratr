@@ -4,10 +4,12 @@
 \alias{aoi_snap}
 \title{Snap Area of Interest}
 \usage{
-aoi_snap(aoi)
+aoi_snap(aoi, method = "shrink")
 }
 \arguments{
 \item{aoi}{is a sf object (e.g. polygon). The bounding box of the shape will be used to create rectangular shape.}
+
+\item{method}{Options are shrink or expand. Shrink will snap the aoi in to the nearest 100m, Expand will snap the aoi out to the nearest 100m.}
 }
 \description{
 Adjusts the area of interest to the nearest 100m.
