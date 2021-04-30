@@ -1,41 +1,53 @@
 ---
-title: "Machine Learning Model: tidyverse"
+title: "Machine Learning Model: using ranger via the tidyverse"
 output: html_document
 params:
-  outDir: "."
-  trDat: trDat
-  target: target
+  outDir:  "."
+  trDat:   trDat
+  target:  target
   target2: target2
-  tid: tid
-  rseed: NA
+  covars:  covars
+  tid:     tid
+  slice:   slice
+  rseed:   NA
   infiles: infiles
-  mmu: mmu
-  mname: mname
-  field_transect: field_transect
-  
-  
+  mmu:     mmu
+  mname:   mname
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, cache=FALSE,
                       warning = FALSE, message = FALSE,
-                      results = 'show',
+                      results = 'hold',
                       eval = TRUE)  ## flag eval = false for quick text edits
 ```
 
+
 ```{r, echo=FALSE}
 ## Load the data and parameters as specified in the R script (model_gen_tidy.R)
+## A challenge for moving this to a function is having the variables listed in this chunk 
+##    also listed within the dataframe -- problematic for running the model
 
-trDat <- params$trDat
-target <- params$target
-target2 <- params$target2
-tid <- params$tid
-infiles<- params$infiles
-mmu <- params$mmu
-mname <- params$mname
-field_transect <- params$field_transect
-outDir <- params$outDir
+outDir  <- params$outDir    # where the model will be saved
+trDat   <- params$trDat     # Training data 
+target  <- params$target    # primary call or target column name
+target2 <- params$target2   # secondary call or second target
+bgc     <- params$bgc       
+covars  <- params$covars    # character vector of covariates 
+groupid <- params$tid       # Transect ID
+slice   <- params$slice     # identify the slice that will be used 
+infiles <- params$infiles   # ?? 
+mmu     <- params$mmu       # Text -- which level are you mapping 
+mname   <- params$mname     # Name of the model
+rseed   <- params$rseed     # random seed 
+# field_transect <- params$field_transect  # GP -- no longer needed ... was for AA.
 
+```
+
+
+```{r}
 library(data.table)
 library(knitr)
 library(cowplot)
@@ -44,231 +56,470 @@ library(tidyverse)
 library(themis)
 library(ggplot2)
 library(janitor)
+library(sf) ## needed?
+```
 
 
-# 
-# # Manual testing : option 
-# # 
+
+```{r}
+
+#
+# # Manual testing : option
+# #
 # #trDat = mpts          # load all bgc model data
+    inmdata_all <- st_read("f:/PEM_Methods_Research/Deception_AOI/1_map_inputs/trainingData/att_5m/s1_deception_pts_att.gpkg") %>% 
+      as_tibble()
     trDat = inmdata_all   # load per bgc model data
 # # # # # #
-     target = "target"       # primary call or target column name
-     target2 = "target2"
-     tid = "tid"             # transect_id column
-     outDir = outDir         # output file
-     indata = indata         # name of input data file for reporting
-     rseed = 456             # define seed to remove random nature of model
-     mmu = mmu               #
-     mname = mname           # model name for reporting
+    target = "mapunit1"       # primary call or target column name
+    target2 = "mapunit1"      # 
+     names(trDat)                     ## 
+     covars <- names(trDat[,10:130])  ## manually set covars list  
+    bgc <- "bgc"
+    groupid = "transect_id"             # how the data is grouped for cross validation 
+    slice = "slice"
+    outDir = "d:/tmp"         # output file
+    indata = "f:/PEM_Methods_Research/Deception_AOI/1_map_inputs/trainingData/att_5m/s1_deception_pts_att.gpkg"         # name of input data file for reporting
+    rseed = 456             # define seed to remove random nature of model
+    mmu = "mmu"               #
+    mname = "Test using Deception"           # model name for reporting
+     
+     
+    
 
 ```
 
 
-This model uses the following parameters: 
+This model uses the following parameters:
 
-* **model reference:** `r params$mname` 
+* **model reference:** `r mname`
 * **mapunit:** `r mmu`
-* **training point set : **`r params$infiles`
+* **training point set : **`r infiles`
 * **model response and covariates: ** `r names(trDat)`
 
 
 ## Response variable: _`r target`_
 
-The following training points and frequency of points were used in the model. 
+The following training points and frequency of points were used in the model.
 
-```{r summary, echo = FALSE, include = TRUE}
+```{r summary, echo = FALSE, include = TRUE, fig.asp=1.2}
 table(trDat[, target])
 
-# calculate summary of raw training data set
+# calculate summary of raw training data set -- currently not in use? 
 trDat_sum <- trDat %>%
-  dplyr::group_by(target) %>%
+  dplyr::group_by_at(target) %>%
   dplyr::summarise(freq = n()) %>%
   dplyr::mutate(prop = round(freq/sum(freq),3))
 
-ggplot(trDat, aes(target)) +
-  geom_bar() + 
-  theme(axis.text.x = element_text(angle = 90))
+## graph 
+trDat_sum %>% ggplot(aes_string(x = target , y = "freq")) + 
+  geom_col() +
+  labs(title = "Frequency of various site classifications",
+       x = "",
+       y = "") + 
+  coord_flip() +
+  theme(axis.text.x = element_text(angle = 90)) 
+
 
 ```
 
 
-```{r cv and test loop, include = FALSE, echo = FALSE, eval =TRUE}
-# format data for model by removing covars with NA values 
+## Data Cleaning 
 
-trDat_all <- trDat[complete.cases(trDat[ , 6:length(trDat)]),]
-  
-# create a subset of data by removing any variables not in model (required for model to run without error) 
+### Remove covariates with NA values
 
-trDat <- trDat_all %>%
-    dplyr::select(-c( bgc_cat)) %>%
-    mutate(slice = as.factor(slice))
+Input dataframes may have more variables then we are interested in.  This section creates a clean dataframe by limiting it variables listed in the input parameters (i.e., target(s), covariates, transect id, slice id).
+
+```{r set model data frame}
+# format data for model by removing covars with NA values
+# trDat_all <- trDat[complete.cases(trDat[ , 6:length(trDat)]),]  ### DANGER!!!! specifying covariates by index
+
+# setCols   <- c(target, bgc, groupid, slice, covars) ## list all the columns names: target, bgc, transect id, covars
+setCols   <- c(target, groupid, covars) ## list all the columns names: target, bgc, transect id, covars
+
+colNums   <- match(setCols, names(trDat))       ## numerical index
+trDat_all <- trDat %>% dplyr::select(colNums)   ## reduces the list to only columns of interest 
+
+```
+
+
+```{r remove variables with na values, results='hold'}
+t <- colSums(is.na(trDat_all)) %>% as.data.frame() %>% rownames_to_column()
+names(t) <- c("covar", "na_count") 
+t <- t[t$na_count > 0, ] 
+t <- t[t$covar %in% covars, ] ## only drop covariates (i.e. not target or tid)
+
+print(paste("The following covariates were removed as they contained NA values:"))
+print(t$covar)
+
+
+## remove covars with NA values 
+trDat_all <- trDat_all %>% dplyr::select(-t$covar)
+```
+
+
+### Remove incomplete cases
+
+The data frame may contain incomplete entries -- removed from analysis here.
+
+```{r remove entries with NA values}
+# create a subset of data by removing any variables not in model (required for model to run without error)
+t <-  trDat_all[!complete.cases(trDat_all), ]
+trDat_all <- trDat_all[complete.cases(trDat_all), ]
+
+
+if (nrow(t) > 0) {
+print(paste(nrow(t), "entries were removed from analysis as they were incomplete cases"))
+t[, 1:3] %>% knitr::kable(format = "html", caption = "Incomplete cases")
+}
+```
+
+
+### Remove low frequecy cases
+
+Further data is removed to ensure cross-fold validation will work.  This is done as a minimum number of samples are needed to allow for the folding of the data. Here there must **50** observations for the cross validated model
+
+```{r}
+t <- trDat_sum[trDat_sum$freq > 50,]
+flt <- dplyr::pull(t[,1])
+
+dropped <- setdiff(dplyr::pull(trDat_sum[,target]), flt)
+
+print("The following classes were dropped as they did not have enough observations:")
+print(dropped)
+
+
+## adjust training dataframe
+trDat_all <-
+  trDat_all[trDat_all[[target]] %in% flt,]
+
+```
+
+
+
+```{r, eval=FALSE}
+## not sure why this is being dropper here -- cc
+# trDat <- trDat_all %>%
+#     dplyr::select(-c( bgc_cat)) %>%
+#     mutate(slice = as.factor(slice))
 
 #trDat <- trDat %>%
-#    filter(!is.na(tid)) 
+#    filter(!is.na(tid))
+```
 
-# Cross validation loop based on slices 
-slices <- unique(trDat$slice) %>% droplevels()
 
-# for all slices
-sresults <- foreach(k = levels(slices)) %do% {
+## Set up cross validation 
 
- # k = levels(slices)[1]
-  ### split into train and test based on 5-site slices
-  
-  # training set
-  BGC_train <- trDat %>% dplyr::filter(!slice %in% k) %>%
-    filter(is.na(target2)) # train only on pure calls
-  BGC_train <- BGC_train %>%
-    dplyr::select(-slice, -target2) %>%
-    droplevels()
-  
-  # test set
-  BGC_test <- trDat %>% filter(slice %in% k) 
-  BGC_test_all <- BGC_test # keep for the target2 alt call. 
-  BGC_test <- BGC_test %>%
-    dplyr::select(-slice,-target2)
-  
-  ############### Define test recipes and workflow ###################
-  null_recipe <-
-    recipe(target ~ ., data = BGC_train) %>%
-    update_role(tid, new_role = "id variable") # %>%
-    #step_corr(all_numeric()) %>%        # remove correlated covariates
-    #step_dummy(all_nominal(), -all_outcomes()) %>%
-    #step_zv(all_numeric()) #%>%          # remove values with no variance
-    #step_downsample(target, under_ratio = 25) %>%
-   # step_smote(target, over_ratio = 1, neighbors = 2) #%>% #, over_ratio = 1, neighbors = 2) %>%
-    #prep()
-  
-  #summary(null_recipe)
-  
-  if(length(levels(slices))<5) {
-    vv = 5
-  } else {vv = 10}
-  
-  set.seed(345)
-  pem_cvfold <- group_vfold_cv(
+Original was based on slices and transect_id.  In my mind this is overly complex creating a holdout embeded within a k-fold cross validation .
+
+```{r}
+BGC_train <- trDat_all
+
+## Some renaming to facilitate model run
+BGC_train <- BGC_train %>% rename(targ = target,    ## rename the target response as 'target'
+                                  tid  = groupid)   ## rename the incoming grouping variable as 'tid'
+
+## Convert target and tid to factors
+# BGC_train <- BGC_train# %>% 
+#   mutate(targ <- as.factor(targ),
+#          tid  <- as.factor(tid))
+                                  
+
+### Set model recipe 
+null_recipe <-
+    recipe(targ ~ ., data = BGC_train) %>%
+    update_role(tid, new_role = "id variable") # no longer a predictor
+                 
+
+### Recipe for Cross validation 
+pem_cvfold <- group_vfold_cv(
     BGC_train,
-    v = vv,
-    ### need to build a check for number of tids available to automatically reduce this number where necessary # problem with essfmcw
+    v = 5,  # number of folds 
     repeats = 5,
     group = tid,
-    strata = target
+    strata = targ
   )
-  
-  #summary(pem_cvfold)
-  
-  randf_spec <- rand_forest(mtry = 10, min_n = 2, trees = 200) %>% 
+
+
+### Set model engine 
+randf_spec <- rand_forest(mtry = 10, min_n = 2, trees = 200) %>%
     set_mode("classification") %>%
-    set_engine("ranger", importance = "permutation", verbose = FALSE) 
-    
-  ## trees = 200 is approximately good metrics improve by 1% going 100 -> 200 but go down at higher ntrees
+    set_engine("ranger", importance = "permutation", verbose = FALSE)
+
+
+### Assemble modeling process 
+pem_workflow <- workflow() %>% 
+  add_recipe(null_recipe) %>%
+  add_model(randf_spec)
+
+```
+
+## Run the model 
+
+```{r}
+if (is.na(rseed)) {
+  set.seed(456)
   
-  pem_workflow <- workflow() %>%
-    add_recipe(null_recipe) %>%
-    add_model(randf_spec)
-  
-  #######################################################
-  
-  set.seed(4556)
-  #doParallel::registerDoParallel() 
-  # note when smoting with fit_resample you cant use parrallel process or will cause error
-  
-  cv_results <- fit_resamples(pem_workflow,
-                              resamples = pem_cvfold,
-                              control = control_resamples(save_pred = TRUE))
-  
+} else {
+  set.seed(rseed)
+  }
+
+
+cv_results <- fit_resamples(pem_workflow,
+                            resamples = pem_cvfold,
+                            control = control_resamples(save_pred = TRUE))
+
   # collect metrics
   cv_metrics <- cv_results  %>% collect_metrics(summarize = FALSE)
   cv_metrics_sum <- cv_results %>% collect_metrics()
   
-  # collect predictions
-  cv_pred <- cv_results %>% collect_predictions(summarize = FALSE)
-  
-  cv_pred_sum <- cv_results %>% collect_predictions(summarize = TRUE)
-  cv_pred_sum <- cv_pred_sum %>% dplyr::select(target, .pred_class)
-  
-  identical(levels(cv_pred_sum$target),
-            levels(cv_pred_sum$.pred_class))
-  
-  ## CV model accuracy metrics
-  cv_pred_sum <- as.data.frame(cv_pred_sum)
-  
-  cv_acc <- acc_metrix(cv_pred_sum) %>%
-    mutate(slice = k, 
-           acc_type = "cv_estimate")
-  
- ## build final train model and predict test data and compare acc_metrix to cv results
+print(cv_metrics)
+print(cv_metrics_sum)
+```
 
-  PEM_rf1 <- fit(pem_workflow, BGC_train)
-  
-  final_fit <- pull_workflow_fit(PEM_rf1) # %>%pull(.predictions)
+## Accuracy metrics 
 
-  oob  <- round(PEM_rf1$fit$fit$fit$prediction.error, 3)
+```{r}
+# collect predictions
+cv_pred     <- cv_results %>% collect_predictions(summarize = FALSE)
+# cv_pred_sum <- cv_results %>% collect_predictions(summarize = TRUE)
+# 
+# xx <- cv_pred %>% tabyl(targ, .pred_class)
+# xy <- xx %>% pivot_longer(cols = !targ,
+#                           values_to = "Count",
+#                           names_to = "Predicted") 
 
-  ######### Predict Test
-  #test_target <- as.data.frame(BGC_test$target) %>% rename(target = 1)
-  test_target <- BGC_test_all %>% dplyr::select(target, target2)
-
-  test.pred <-  predict(PEM_rf1, BGC_test)
-  test.pred <- cbind(test_target, test.pred) %>% 
-    mutate_if(is.character, as.factor)
-  # levels(train.pred$target)
-  
-  ###harmonize levels
-  targ.lev <- levels(test.pred$target)
-  pred.lev <- levels(test.pred$.pred_class)
-  levs <- c(targ.lev, pred.lev) %>% unique()
-  test.pred$target <- factor(test.pred$target, levels = levs)
-  test.pred$.pred_class <- factor(test.pred$.pred_class, levels = levs)
-  # output test predictions
-  test.pred.out <- test.pred %>% mutate(slice = k)
-     
-  # train.acc <- acc_metrix(train.pred) %>% rename(train = .estimate)
-  test.acc <- acc_metrix(test.pred) %>%
-       mutate(slice = k, 
-           acc_type = "test_estimate", 
-           oob = oob)
-  
-  ## compare cv stats to test stats
-  acc.compare <- bind_rows(cv_acc, test.acc)
-
-  return(list(acc.compare, test.pred.out))
-}
-
-#pem_workflow
-
-# extract results from sresults
-pred_matrix <- lapply(sresults, function(x) x[[2]])
-acc_results <- lapply(sresults, function(x) x[[1]])
-
-acc <- as.data.frame(rbindlist(acc_results))
-test.pred <- as.data.frame(rbindlist(pred_matrix)) 
-
-save(acc, file = paste(paste0(".", outDir), "model_results.RData", sep = "/"))
-
-write.csv(acc, file = paste(paste0(".", outDir), "acc_results.csv",sep = "/"))
+cfm <- caret::confusionMatrix(cv_pred$.pred_class, cv_pred$targ)
+cfm
+                       
+```
 
 
-# add final model - all output here. 
+```{r}
+PEM_rf1 <- fit(pem_workflow, BGC_train)
 
- ############### Define test recipes and workflow ###################
-  
-final_data <- trDat %>% dplyr::select(-c(tid, target2,slice))
-  
-final_recipe <-
-    recipe(target ~ ., data = final_data) %>%
-    step_downsample(target, under_ratio = 25) %>%
-    step_smote(target, over_ratio = 1, neighbors = 2)
+final_fit <- pull_workflow_fit(PEM_rf1) # %>%pull(.predictions)
+final_fit
+oob  <- round(PEM_rf1$fit$fit$fit$prediction.error, 3)
 
-pem_workflow <- workflow() %>%
-    add_recipe(final_recipe) %>%
-    add_model(randf_spec)
-  
-PEM_final <- fit(pem_workflow, final_data)
 
+
+# saveRDS(final_fit, file = paste(paste0(".", outDir), "final_tmodel.rds",sep = "/"))
+
+
+
+```
+
+
+```{r, eval=FALSE}
+## More indepth accuracy metrics -- see `acc_metrix()` script bu GP
+## not used here 
+# 
+#   # collect predictions
+#   cv_pred <- cv_results %>% collect_predictions(summarize = FALSE)
+# 
+#   cv_pred_sum <- cv_results %>% collect_predictions(summarize = TRUE)
+#   cv_pred_sum <- cv_pred_sum %>% dplyr::select(target, .pred_class)
+# 
+#   identical(levels(cv_pred_sum$targ),
+#             levels(cv_pred_sum$.pred_class))
+# 
+#   
+#   cv_pred_sum %>% 
+#     dplyr::select(.pred_class) %>% 
+#     group_by(.pred_class) %>% 
+#     dplyr::mutate(pred.tot = n()) %>% 
+#     ungroup() %>% distinct()
+#   
+#   
+#   ## CV model accuracy metrics
+#   cv_pred_sum <- as.data.frame(cv_pred_sum)
+# 
+#   cv_acc <- acc.metrix(cv_pred_sum) #%>%
+#     mutate(slice = k,
+#            acc_type = "cv_estimate")
+# 
+#  ## build final train model and predict test data and compare acc_metrix to cv results
+# 
+#   PEM_rf1 <- fit(pem_workflow, BGC_train)
+# 
+#   final_fit <- pull_workflow_fit(PEM_rf1) # %>%pull(.predictions)
+# 
+#   oob  <- round(PEM_rf1$fit$fit$fit$prediction.error, 3)
+
+```
+
+
+
+
+
+```{r, eval=FALSE}
+## NOTE THIS BLOCK WILL NOT CURRENTLY RUN 
+
+# 
+# # Cross validation loop based on slices
+# slices <- unique(trDat_all$slice) #%>% droplevels()
+# 
+# # for all slices
+# sresults <- foreach(k = levels(slices)) %do% {
+# 
+#  # k = levels(slices)[1]
+#   ### split into train and test based on 5-site slices
+# 
+#   # training set
+#   BGC_train <- trDat %>% dplyr::filter(!slice %in% k) %>%
+#     filter(is.na(target2)) # train only on pure calls
+#   BGC_train <- BGC_train %>%
+#     dplyr::select(-slice, -target2) %>%
+#     droplevels()
+# 
+#   # test set
+#   BGC_test <- trDat %>% filter(slice %in% k)
+#   BGC_test_all <- BGC_test # keep for the target2 alt call.
+#   BGC_test <- BGC_test %>%
+#     dplyr::select(-slice,-target2)
+# 
+#   ############### Define test recipes and workflow ###################
+#   null_recipe <-
+#     recipe(target ~ ., data = BGC_train) %>%
+#     update_role(tid, new_role = "id variable") # %>%
+#     #step_corr(all_numeric()) %>%        # remove correlated covariates
+#     #step_dummy(all_nominal(), -all_outcomes()) %>%
+#     #step_zv(all_numeric()) #%>%          # remove values with no variance
+#     #step_downsample(target, under_ratio = 25) %>%
+#    # step_smote(target, over_ratio = 1, neighbors = 2) #%>% #, over_ratio = 1, neighbors = 2) %>%
+#     #prep()
+# 
+#   #summary(null_recipe)
+# 
+#   if(length(levels(slices))<5) {
+#     vv = 5
+#   } else {vv = 10}
+# 
+#   set.seed(345)
+#   pem_cvfold <- group_vfold_cv(
+#     BGC_train,
+#     v = vv,
+#     ### need to build a check for number of tids available to automatically reduce this number where necessary # problem with essfmcw
+#     repeats = 5,
+#     group = tid,
+#     strata = target
+#   )
+# 
+#   #summary(pem_cvfold)
+# 
+#   randf_spec <- rand_forest(mtry = 10, min_n = 2, trees = 200) %>%
+#     set_mode("classification") %>%
+#     set_engine("ranger", importance = "permutation", verbose = FALSE)
+# 
+#   ## trees = 200 is approximately good metrics improve by 1% going 100 -> 200 but go down at higher ntrees
+# 
+#   pem_workflow <- workflow() %>%
+#     add_recipe(null_recipe) %>%
+#     add_model(randf_spec)
+# 
+#   #######################################################
+# 
+#   set.seed(4556)
+#   #doParallel::registerDoParallel()
+#   # note when smoting with fit_resample you cant use parrallel process or will cause error
+# 
+#   cv_results <- fit_resamples(pem_workflow,
+#                               resamples = pem_cvfold,
+#                               control = control_resamples(save_pred = TRUE))
+# 
+#   # collect metrics
+#   cv_metrics <- cv_results  %>% collect_metrics(summarize = FALSE)
+#   cv_metrics_sum <- cv_results %>% collect_metrics()
+# 
+#   # collect predictions
+#   cv_pred <- cv_results %>% collect_predictions(summarize = FALSE)
+# 
+#   cv_pred_sum <- cv_results %>% collect_predictions(summarize = TRUE)
+#   cv_pred_sum <- cv_pred_sum %>% dplyr::select(target, .pred_class)
+# 
+#   identical(levels(cv_pred_sum$target),
+#             levels(cv_pred_sum$.pred_class))
+# 
+#   ## CV model accuracy metrics
+#   cv_pred_sum <- as.data.frame(cv_pred_sum)
+# 
+#   cv_acc <- acc_metrix(cv_pred_sum) %>%
+#     mutate(slice = k,
+#            acc_type = "cv_estimate")
+# 
+#  ## build final train model and predict test data and compare acc_metrix to cv results
+# 
+#   PEM_rf1 <- fit(pem_workflow, BGC_train)
+# 
+#   final_fit <- pull_workflow_fit(PEM_rf1) # %>%pull(.predictions)
+# 
+#   oob  <- round(PEM_rf1$fit$fit$fit$prediction.error, 3)
+# 
+#   ######### Predict Test
+#   #test_target <- as.data.frame(BGC_test$target) %>% rename(target = 1)
+#   test_target <- BGC_test_all %>% dplyr::select(target, target2)
+# 
+#   test.pred <-  predict(PEM_rf1, BGC_test)
+#   test.pred <- cbind(test_target, test.pred) %>%
+#     mutate_if(is.character, as.factor)
+#   # levels(train.pred$target)
+# 
+#   ###harmonize levels
+#   targ.lev <- levels(test.pred$target)
+#   pred.lev <- levels(test.pred$.pred_class)
+#   levs <- c(targ.lev, pred.lev) %>% unique()
+#   test.pred$target <- factor(test.pred$target, levels = levs)
+#   test.pred$.pred_class <- factor(test.pred$.pred_class, levels = levs)
+#   # output test predictions
+#   test.pred.out <- test.pred %>% mutate(slice = k)
+# 
+#   # train.acc <- acc_metrix(train.pred) %>% rename(train = .estimate)
+#   test.acc <- acc_metrix(test.pred) %>%
+#        mutate(slice = k,
+#            acc_type = "test_estimate",
+#            oob = oob)
+# 
+#   ## compare cv stats to test stats
+#   acc.compare <- bind_rows(cv_acc, test.acc)
+# 
+#   return(list(acc.compare, test.pred.out))
+# }
+# 
+# #pem_workflow
+# 
+# # extract results from sresults
+# pred_matrix <- lapply(sresults, function(x) x[[2]])
+# acc_results <- lapply(sresults, function(x) x[[1]])
+# 
+# acc <- as.data.frame(rbindlist(acc_results))
+# test.pred <- as.data.frame(rbindlist(pred_matrix))
+# 
+# save(acc, file = paste(paste0(".", outDir), "model_results.RData", sep = "/"))
+# 
+# write.csv(acc, file = paste(paste0(".", outDir), "acc_results.csv",sep = "/"))
+# 
+# 
+# # add final model - all output here.
+# 
+#  ############### Define test recipes and workflow ###################
+# 
+# final_data <- trDat %>% dplyr::select(-c(tid, target2,slice))
+# 
+# final_recipe <-
+#     recipe(target ~ ., data = final_data) %>%
+#     step_downsample(target, under_ratio = 25) %>%
+#     step_smote(target, over_ratio = 1, neighbors = 2)
+# 
+# pem_workflow <- workflow() %>%
+#     add_recipe(final_recipe) %>%
+#     add_model(randf_spec)
+# 
+# PEM_final <- fit(pem_workflow, final_data)
+# 
 # write out model
-saveRDS(PEM_final, file = paste(paste0(".", outDir), "final_tmodel.RDATA",sep = "/"))
-saveRDS(PEM_final, file = paste(paste0(".", outDir), "final_tmodel.rds",sep = "/"))
+# saveRDS(PEM_final, file = paste(paste0(".", outDir), "final_tmodel.RDATA",sep = "/"))
+# saveRDS(PEM_final, file = paste(paste0(".", outDir), "final_tmodel.rds",sep = "/"))
 
 #acc = read.csv("D:\\PEM_DATA\\BEC_DevExchange_Work\\Deception_AOI\\3_maps_analysis\\models\\forest\\fore_mu_bgc\\64\\SBSmc2\\acc_results.csv")
 
@@ -283,82 +534,115 @@ pem_workflow
 
 ## Test Accuracy metrics
 
-This table contains a mean and standard deviation of the bootstrapped test metrics. 
+This table contains a mean and standard deviation of the bootstrapped test metrics.
 
 
-```{r final test results, include = TRUE, echo = FALSE, eval = TRUE}
-final_metrics <- acc %>%
-  filter(acc_type == "test_estimate") %>% 
-  dplyr::select(-acc_type) %>%
-  dplyr::select(accuracy:oob) %>%
-  distinct() %>%
-  pivot_longer(cols = where(is.numeric), names_to = "accuracy_type", values_to = "value") %>%
-  distinct() %>%
-  group_by(accuracy_type) %>%
-  summarise(mean_val = round(mean(value, na.rm = TRUE),2),
-            st_dev = round(sd(value, na.rm = TRUE),2)) %>%
-  filter(!accuracy_type %in% c("spat_fpa", "spat_pa", "mcc_fpa","mcc_pa"))
-  
-    
-kable(final_metrics, caption = "Average Bootstrapped Test Metrics")
-
-# confidence interval based on average prediction confus
-
-conf_matrix <- test.pred %>% 
-   conf_mat(target, .pred_class) %>%
-   pluck(1) %>%
-   as_tibble() %>%
-   ggplot(aes(Prediction, Truth, alpha = n)) +
-   geom_tile(show.legend = FALSE) +
-   geom_text(aes(label = n), colour = "black", alpha = 1, size = 3) + 
-   theme(axis.text.x = element_text(angle = 90)) + 
-   labs(main = "Example Test Confusion Matrix")
-    
- conf_matrix
+```{r final test results, include = TRUE, echo = FALSE, eval = FALSE}
+## Additional accuracy metrics -- not implemented
+# 
+# final_metrics <- acc %>%
+#   filter(acc_type == "test_estimate") %>%
+#   dplyr::select(-acc_type) %>%
+#   dplyr::select(accuracy:oob) %>%
+#   distinct() %>%
+#   pivot_longer(cols = where(is.numeric), names_to = "accuracy_type", values_to = "value") %>%
+#   distinct() %>%
+#   group_by(accuracy_type) %>%
+#   summarise(mean_val = round(mean(value, na.rm = TRUE),2),
+#             st_dev = round(sd(value, na.rm = TRUE),2)) %>%
+#   filter(!accuracy_type %in% c("spat_fpa", "spat_pa", "mcc_fpa","mcc_pa"))
+# 
+# 
+# kable(final_metrics, caption = "Average Bootstrapped Test Metrics")
+# 
+# # confidence interval based on average prediction confus
+# 
+# conf_matrix <- test.pred %>%
+#    conf_mat(target, .pred_class) %>%
+#    pluck(1) %>%
+#    as_tibble() %>%
+#    ggplot(aes(Prediction, Truth, alpha = n)) +
+#    geom_tile(show.legend = FALSE) +
+#    geom_text(aes(label = n), colour = "black", alpha = 1, size = 3) +
+#    theme(axis.text.x = element_text(angle = 90)) +
+#    labs(main = "Example Test Confusion Matrix")
+# 
+#  conf_matrix
 
 ```
 
-```{r variable importance, include = TRUE, echo = FALSE}
-### Variable importance plot
 
-# 1) basic model all covars 
+QUESTION REMAINS: why is the VIP giving 
+
+## Variable importance 
+
+```{r variable importance, include = TRUE, echo = FALSE}
+## Recipe: 1. Variable importance plot
+vip_recipe <-
+    recipe(targ ~ ., data = BGC_train) %>%
+    update_role(tid, new_role = "id variable") 
+
+## 2. CV -- Not Applicable
+
+
+## 3. Model Engine
+# 1) basic model all covars
 randf_final <- rand_forest(mtry = 20, min_n = 2, trees = 1000) %>%
    set_mode("classification") %>%
-   set_engine("ranger", importance = "permutation") 
+   set_engine("ranger", importance = "permutation",
+              verbose = TRUE)
 
-trDat_final <- trDat %>% dplyr::select(-c(target2, slice))
-# 
-vip_recipe <-
-    recipe(target ~ ., data = trDat_final) %>%
-    update_role(tid, new_role = "id variable") %>%
-    step_downsample(target, under_ratio = 25) %>%
-    step_smote(target, over_ratio = 1, neighbors = 2)
+## 4. Model workflow
 
-# # calculate the final variable importance per model
- final_vip <- workflow() %>%
+final_vi <- workflow() %>%
    add_recipe(vip_recipe) %>%
    add_model(randf_final) %>%
-   fit(trDat_final) 
+   fit(BGC_train)
+# trDat_final <- trDat %>% dplyr::select(-c(target2, slice))
+
+
+# BGC_train <- BGC_train %>% mutate(targ = as.factor(targ),
+#                      tid  = as.factor(tid))
+
+
+#%>%
+    # step_downsample(target, under_ratio = 25) #%>%
+    # step_smote(target, over_ratio = 1, neighbors = 2)
+
+# # calculate the final variable importance per model
+
+
+
  
- # report final VIP oob - all values 
-oob_final_vip  <- round(final_vip$fit$fit$fit$prediction.error, 3)
-oob_final_vip 
+ 
+ 
+ # report final VIP oob - all values
+oob_final_vip  <- round(final_vi$fit$fit$fit$prediction.error, 3)
+oob_final_vip
 
-  final_vip <-  final_vip %>%
+final_vi2 <-  final_vi %>%
    pull_workflow_fit() %>%
-   vip(num_feature = 20)
+   vip::vi()
 
+final_vi2
+#####
+final_vip <-  final_vi %>%
+   pull_workflow_fit() %>%
+   vip::vip(num_features = 20)
 final_vip
+```
 
+# COLIN GOT TO HERE ----------
 
+```{r}
 ## 2) calculate final VIP with uncorrelated variables
 ## # remove highly correlated variables
 
-descrCor <- cor(trDat_final[,-(1:2)])
-highlyCorDescr <- findCorrelation(descrCor, cutoff = 0.80, verbose = FALSE, names = TRUE)
+descrCor <- cor(BGC_train[,names(BGC_train) %in% covars])
+highlyCorDescr <- caret::findCorrelation(descrCor, cutoff = 0.80, verbose = FALSE, names = TRUE)
 col.to.rm <- c(highlyCorDescr)
 
-trDat_final = trDat_final %>% 
+trDat_final = trDat_final %>%
   dplyr::select(names(trDat_final)[!names(trDat_final) %in% col.to.rm])    
 
 vip_recipe <-
@@ -373,30 +657,30 @@ final_vip_model <- workflow() %>%
    add_model(randf_final) %>%
    fit(trDat_final) #%>%
 
- # report final VIP oob 
+ # report final VIP oob
 oob_final_vip_uc  <- round(final_vip_model$fit$fit$fit$prediction.error, 3)
-oob_final_vip_uc 
+oob_final_vip_uc
 
 # plot Vip
 final_vip_uc_wf <- final_vip_model %>%
-   pull_workflow_fit() 
+   pull_workflow_fit()
 
 final_vip_uc <- final_vip_uc_wf %>%
-   vip(num_feature = 20) 
+   vip(num_feature = 20)
 
 final_vip_uc
 
 
 # keep top 6 models and compare
 vi <- vi(final_vip_uc_wf)
-vi <- vi[1:6,1] # remove from 7 onwards 
+vi <- vi[1:6,1] # remove from 7 onwards
 
 vi <- c("target", "tid", pull(vi))
 
-trDat_final_vip = trDat_final %>% 
+trDat_final_vip = trDat_final %>%
   dplyr::select(names(trDat_final)[names(trDat_final) %in% vi])    
 
-# fix model and 
+# fix model and
 vip_recipe <-
     recipe(target ~ ., data = trDat_final_vip) %>%
     update_role(tid, new_role = "id variable") %>%
@@ -406,16 +690,16 @@ vip_recipe <-
 final_six_vip_model <- workflow() %>%
    add_recipe(vip_recipe) %>%
    add_model(randf_final) %>%
-   fit(trDat_final_vip) 
- 
- # report final VIP oob 
+   fit(trDat_final_vip)
+
+ # report final VIP oob
 oob_six_vip_uc  <- round(final_six_vip_model$fit$fit$fit$prediction.error, 3)
-oob_six_vip_uc 
+oob_six_vip_uc
 
 # plot Vip
 #final_six_vip <- final_six_vip_model  %>%
 #   pull_workflow_fit()  %>%
-#   vip() 
+#   vip()
 
 #final_six_vip
 
@@ -423,7 +707,7 @@ oob_six_vip_uc
 
 
 ```
-  
+
 
 ```{r define models with tuning parameter option, echo = FALSE, eval= FALSE}
 # 2: Optional:  Perform model hyperparameter tuning (optional)   
@@ -448,14 +732,14 @@ pem_workflow <- workflow() %>%
 cv_metrics <- metric_set(accuracy, roc_auc, j_index)
 
 set.seed(345)
-pem_cvfold <- vfold_cv(trDat, 
-                          v = 10, 
-                          repeats = 3, 
+pem_cvfold <- vfold_cv(trDat,
+                          v = 10,
+                          repeats = 3,
                           strata = target)
 
 
-# Two methods are available for tuning; 1) basic grid and 2) regular grid. 
-# For Random Forest we are using regular grid tune to assess hyperparameters. 
+# Two methods are available for tuning; 1) basic grid and 2) regular grid.
+# For Random Forest we are using regular grid tune to assess hyperparameters.
 
 # Tune the model
 # ##https://www.youtube.com/watch?v=ts5bRZ7pRKQ
@@ -513,24 +797,24 @@ ranger_tune %>%
   facet_wrap(~parameter)
 
 
-# for the 30 m standard pt # minimal change in mtry after 5 - 10 
+# for the 30 m standard pt # minimal change in mtry after 5 - 10
 # mtry = 10, min_n = 2
 
 ```
 
-    
-## Overall accuracy. 
+
+## Overall accuracy.
 
 The overall map accuracy was calculated but determining the percent correct for each map unit by comparing transect data (held-out slice).
 
-### Types of accuracy 
+### Types of accuracy
 Several types of accuracy measures were calculated;
 
 1) aspatial: this is equivalent to traditional AA where proportion of map units are compared. Aspatial_acc is the accuracy per slice (i.e total accuracy over the site). Aspatial_meanacc is the accuracy based on the average of map units (ie: 100% correct = 0% correct).
 
 2) spatial (spat_p): this compares spatial equivalents for the primary call for each pixal/point predicted.
 
-3) spatial primary/alt calls (spat_pa). This assigns a value if the alternate call matches the predicted call. 
+3) spatial primary/alt calls (spat_pa). This assigns a value if the alternate call matches the predicted call.
 
 4) fuzzy spatially explicit accuracy: we tested an alternate accuracy measure (spat_fp) to account for calls which were similar (on the edatopic position) to the correct calls. In this case scores could be awarded for on a sliding scale from 1 (Correct) to 0 (no where close) with partial credit assigned to closely related mapunits. Note this requires a matrix which specifies the similarity between all combinations of possible calls. This was also calculated for primary and alternate calls (spat_fpa)
 
@@ -541,9 +825,9 @@ bsRes <- acc %>%
 
 #write.csv(bsRes, "bsRes_test.csv")
 
-bsRes_all <- bsRes %>% 
+bsRes_all <- bsRes %>%
   group_by(slice, acc_type) %>%
-  
+
  #mutate(aspat_p = min((targ.ratio/slice_sum),(map.total/trans.total))*100) %>%
   mutate(aspat_p_acc = aspatial_acc,
          aspat_p_meanacc = aspatial_meanacc,
@@ -560,16 +844,16 @@ bsRes_all <- bsRes %>%
    pivot_longer(cols = where(is.numeric), names_to = "accuracy_type", values_to = "value") %>%
   distinct()
 
-p2 <- ggplot(aes(y = value, x = accuracy_type, fill = acc_type), data = bsRes_all) + 
+p2 <- ggplot(aes(y = value, x = accuracy_type, fill = acc_type), data = bsRes_all) +
    geom_boxplot() +
    scale_fill_brewer(type = "qual") +
    #facet_wrap(~acc_type)+
-   #geom_jitter(position=position_jitter(width=.1), colour = "grey", alpha = 0.8) + 
-   geom_hline(yintercept = 65,linetype ="dashed", color = "red") + 
-   ggtitle("Overall accuracy measures (median + quartiles)") + 
+   #geom_jitter(position=position_jitter(width=.1), colour = "grey", alpha = 0.8) +
+   geom_hline(yintercept = 65,linetype ="dashed", color = "red") +
+   ggtitle("Overall accuracy measures (median + quartiles)") +
    theme(axis.text.x = element_text(angle = 90)) +
-   xlab("Mapunit") + ylab("Accuracy") + 
-   ylim(-0.05, 100) 
+   xlab("Mapunit") + ylab("Accuracy") +
+   ylim(-0.05, 100)
 
 p2
 
@@ -584,17 +868,17 @@ bsRes_temp <- bsRes_all %>%
   filter(!is.na(type)) %>%
   mutate(accuracy_type = ifelse(accuracy_type == "spat_p_acc", "acc_spatial", accuracy_type))
 
-  
-p3 <- ggplot(aes(y = value, x = accuracy_type, fill = acc_type), data = bsRes_temp) + 
+
+p3 <- ggplot(aes(y = value, x = accuracy_type, fill = acc_type), data = bsRes_temp) +
    geom_boxplot() +
    scale_fill_brewer(type = "qual") +
    facet_grid(~type, scales = "free_x")+
-   #geom_jitter(position=position_jitter(width=.1), colour = "grey", alpha = 0.8) + 
-   geom_hline(yintercept = 65,linetype ="dashed", color = "red") + 
-   ggtitle("Overall accuracy measures (median + quartiles)") + 
+   #geom_jitter(position=position_jitter(width=.1), colour = "grey", alpha = 0.8) +
+   geom_hline(yintercept = 65,linetype ="dashed", color = "red") +
+   ggtitle("Overall accuracy measures (median + quartiles)") +
    theme(axis.text.x = element_text(angle = 90)) +
-   xlab("Mapunit") + ylab("Accuracy") + 
-   ylim(-0.05, 100) 
+   xlab("Mapunit") + ylab("Accuracy") +
+   ylim(-0.05, 100)
 
 p3
 
@@ -609,23 +893,23 @@ bsRes_limit <- bsRes_all %>%
   filter(accuracy_type %in% c("aspat_p_meanacc", "aspat_p_acc", "spat_p_acc",                      "spat_pa_acc","spat_fp_tot" , "spat_fpa_tot", "mcc", "spat_fp_mcc", "spat_pa_mcc", "spat_fpa_mcc"))
 
 bsRes_limit <- bsRes_limit %>%
-  mutate(acuracy_type = factor(accuracy_type, 
+  mutate(acuracy_type = factor(accuracy_type,
              levels = c("aspat_p_acc","aspat_p_meanacc",
                         "spat_p_acc",  "mcc",
                         "spat_pa_acc", "spat_pa_mcc",
                         "spat_fp_tot" , "spat_fp_mcc",
                         "spat_fpa_tot", "spat_fpa_mcc")))
 
-p2 <- ggplot(aes(y = value, x = accuracy_type, fill = acc_type), data = bsRes_limit) + 
+p2 <- ggplot(aes(y = value, x = accuracy_type, fill = acc_type), data = bsRes_limit) +
    geom_boxplot() +
    scale_fill_brewer(type = "qual") +
    #facet_wrap(~acc_type)+
-   #geom_jitter(position=position_jitter(width=.1), colour = "grey", alpha = 0.8) + 
-   geom_hline(yintercept = 65,linetype ="dashed", color = "red") + 
-   ggtitle("Proposed accuracy measures (median + quartiles)") + 
+   #geom_jitter(position=position_jitter(width=.1), colour = "grey", alpha = 0.8) +
+   geom_hline(yintercept = 65,linetype ="dashed", color = "red") +
+   ggtitle("Proposed accuracy measures (median + quartiles)") +
    theme(axis.text.x = element_text(angle = 90)) +
-   xlab("Mapunit") + ylab("Accuracy") + 
-   ylim(-0.05, 100) 
+   xlab("Mapunit") + ylab("Accuracy") +
+   ylim(-0.05, 100)
 
 p2
 
@@ -634,11 +918,11 @@ p2
 
 ## Accuracy per mapunit
 
-We can compare map unit accuracy levels to assess under or acceptable performance per map units. 
+We can compare map unit accuracy levels to assess under or acceptable performance per map units.
 
 ```{r generate overall mapunit, echo = FALSE, eval = TRUE}
 
-mapunit_tot <- bsRes %>% 
+mapunit_tot <- bsRes %>%
   dplyr::filter(acc_type == "test_estimate") %>%
   group_by(slice, target, acc_type) %>%
   dplyr::select(trans.tot, pred.tot, trans.sum, aspat_p, unit_pos, spat_p, spat_fp, spat_pa, spat_fpa, aspatial_acc , aspatial_meanacc)%>%
@@ -651,15 +935,15 @@ mapunit_tot <- bsRes %>%
   dplyr::select(slice, target, spat_p_tot,
                 spat_pa_tot, spat_fp_tot, spat_fpa_tot, aspat_p) %>%
   pivot_longer(., cols = where(is.numeric), names_to = "type")
-         
 
-p2 <- ggplot(aes(y = value, x = target, fill = type), data = mapunit_tot) + 
-   geom_boxplot() + 
-   #facet_wrap(~acc_type) + 
-   geom_hline(yintercept = 65,linetype ="dashed", color = "red") + 
-   ggtitle("Test accuracy per mapunit") + 
+
+p2 <- ggplot(aes(y = value, x = target, fill = type), data = mapunit_tot) +
+   geom_boxplot() +
+   #facet_wrap(~acc_type) +
+   geom_hline(yintercept = 65,linetype ="dashed", color = "red") +
+   ggtitle("Test accuracy per mapunit") +
    theme(axis.text.x = element_text(angle = 90)) +
-   xlab("Mapunit") + ylab("Accuracy") + 
+   xlab("Mapunit") + ylab("Accuracy") +
    ylim(-0.05, 100)
 
 p2
@@ -668,13 +952,11 @@ p2
 ```
 
 
-# References: 
+# References:
 - https://towardsdatascience.com/modelling-with-tidymodels-and-parsnip-bae2c01c131c
 
-* [accuracy](https://yardstick.tidymodels.org/reference/accuracy.html) 
+* [accuracy](https://yardstick.tidymodels.org/reference/accuracy.html)
 * [roc_auc](https://yardstick.tidymodels.org/reference/roc_auc)
-* [sensitivity](https://yardstick.tidymodels.org/reference/sens.html) 
+* [sensitivity](https://yardstick.tidymodels.org/reference/sens.html)
 * [specificity](https://yardstick.tidymodels.org/reference/spec.html)
 * [positive predictive value (ppv)](https://yardstick.tidymodels.org/reference/ppv.html)  
-  
-  
