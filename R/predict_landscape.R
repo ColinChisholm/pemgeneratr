@@ -211,8 +211,9 @@ predict_landscape <- function(model, cov,tilesize = 500,
       r_tiles <- list.files(paste(outDir, k, sep = "/"),
                             pattern = ".tif",
                             full.names = TRUE)
-      # remove pot. xml files
-      r_tiles <- r_tiles[-(grep(r_tiles, pattern = "xml"))] ## drop any associated xml files
+      # remove pot. xml files 
+      # this was causing script to fail -- returned empty vector
+      # r_tiles <- r_tiles[-(grep(r_tiles, pattern = "xml"))] ## drop any associated xml files
 
 
       ## mosaic
