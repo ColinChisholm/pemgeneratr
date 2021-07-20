@@ -11,12 +11,14 @@ model_gen(traindat, target, mType = "rF", outDir = ".", rseed = NA)
 
 \item{target}{The name of the response variable in the traindat data frame.}
 
-\item{mType}{\strong{rF} for a \code{ranger} random forest; \strong{esb} for an \code{ensemble} of \code{ranger}, \code{glmnet}, \code{xgboost}, and `nnTrain``; \emph{others to be added}.  This acts as a suffix for whcih model_gen_XXX.Rmd to call.}
+\item{mType}{\strong{rF} for a \code{ranger} random forest; \strong{tidy} for a tidymodels version using ranger; \strong{esb} for an \code{ensemble} of \code{ranger}, \code{glmnet}, \code{xgboost}, and `nnTrain``; \emph{others to be added}.  This acts as a suffix for which model_gen_XXX.Rmd to call.}
 
 \item{outDir}{Highly recommended to be set as an absolute directory.  This defaults to the project's root directory OR where the RMD script is saved.
 Additional products generated from the associated `model_gen_XXX.Rmd`` markdown scripts will also be saved to this dir.}
 
 \item{rseed}{Optional random number seed.}
+
+\item{trees}{A random forest parameter for the number of trees to use.}
 }
 \description{
 This function takes in all the data needed to produce machine learning model.
@@ -32,6 +34,8 @@ dat <- read.csv("e:/workspace/2020/PEM/ALRF_PEMv2/dev/modDat.csv",
 model_gen(traindat = dat,
           target = "SiteSeries",
           outDir = "e:/tmp/model_gen_test",
+          mType = "rF",
+          trees = "500",
           rseed = 456)
 }
 \keyword{machine-learning,}
