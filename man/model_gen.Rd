@@ -4,7 +4,14 @@
 \alias{model_gen}
 \title{Generate a machine learning model}
 \usage{
-model_gen(traindat, target, mType = "rF", outDir = ".", rseed = NA)
+model_gen(
+  traindat,
+  target,
+  mType = "rF",
+  outDir = ".",
+  trees = "500",
+  rseed = NA
+)
 }
 \arguments{
 \item{traindat}{Is a dataframe that contains the model training data.  The reponse variable should be one of the columns.}
@@ -16,9 +23,9 @@ model_gen(traindat, target, mType = "rF", outDir = ".", rseed = NA)
 \item{outDir}{Highly recommended to be set as an absolute directory.  This defaults to the project's root directory OR where the RMD script is saved.
 Additional products generated from the associated `model_gen_XXX.Rmd`` markdown scripts will also be saved to this dir.}
 
-\item{rseed}{Optional random number seed.}
-
 \item{trees}{A random forest parameter for the number of trees to use.}
+
+\item{rseed}{Optional random number seed.}
 }
 \description{
 This function takes in all the data needed to produce machine learning model.

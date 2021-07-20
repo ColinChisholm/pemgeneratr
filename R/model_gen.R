@@ -28,7 +28,7 @@
 #'           rseed = 456)
 
 
-model_gen <- function(traindat, target, mType = "rF", outDir = ".", rseed = NA) {
+model_gen <- function(traindat, target, mType = "rF", outDir = ".", trees = "500", rseed = NA) {
   ## create destination folder
   ifelse(!dir.exists(file.path(outDir)),                # if folder does not exist
           dir.create(file.path(outDir)), FALSE)         # create it
