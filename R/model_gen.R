@@ -10,7 +10,8 @@
 #' Additional products generated from the associated `model_gen_XXX.Rmd`` markdown scripts will also be saved to this dir.
 #' @param traindat Is a dataframe that contains the model training data.  The reponse variable should be one of the columns.
 #' @param target   The name of the response variable in the traindat data frame.
-#' @param mType **rF** for a `ranger` random forest; **esb** for an `ensemble` of `ranger`, `glmnet`, `xgboost`, and `nnTrain``; _others to be added_.  This acts as a suffix for whcih model_gen_XXX.Rmd to call.
+#' @param mType **rF** for a `ranger` random forest; **tidy** for a tidymodels version using ranger; **esb** for an `ensemble` of `ranger`, `glmnet`, `xgboost`, and `nnTrain``; _others to be added_.  This acts as a suffix for which model_gen_XXX.Rmd to call.
+#' @param trees A random forest parameter for the number of trees to use.
 #' @param rseed    Optional random number seed.
 #' @keywords machine-learning, model, report
 #' @export
@@ -22,6 +23,8 @@
 #' model_gen(traindat = dat,
 #'           target = "SiteSeries",
 #'           outDir = "e:/tmp/model_gen_test",
+#'           mType = "rF",
+#'           trees = "500",
 #'           rseed = 456)
 
 
