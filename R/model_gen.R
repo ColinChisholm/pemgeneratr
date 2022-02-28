@@ -28,7 +28,7 @@
 #'           rseed = 456)
 
 
-model_gen <- function(traindat, target, mType = "rF", outDir = ".", trees = "500", rseed = NA) {
+model_gen <- function(traindat, target, mType = "rF", outDir = ".", trees = 500, rseed = NA) {
   ## create destination folder
   ifelse(!dir.exists(file.path(outDir)),                # if folder does not exist
           dir.create(file.path(outDir)), FALSE)         # create it
@@ -57,7 +57,8 @@ model_gen <- function(traindat, target, mType = "rF", outDir = ".", trees = "500
                     params = list(traindat = traindat,  ## parameters to send to rmarkdown
                                   target   = target,
                                   outDir = outDir,
-                                  rseed = rseed),
+                                  rseed = rseed,
+                                  trees = trees),
                     output_dir = outDir)                ## where to save the report
 
   ## open the report
