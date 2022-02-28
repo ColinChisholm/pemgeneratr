@@ -1,0 +1,88 @@
+```{r}
+library(dplyr)
+library(sf)
+library(knitr)
+tformat = "markdown"
+```
+
+
+
+```{r, eval=TRUE}
+## datasets to process
+datSets <- data.frame(
+  Name = c("Aleza","Eagle Hills", "Eagle Hills,", "Deception", "Deception"),
+  Subzone = c("SBSwk1","IDFxh", "IDFdk", "ESSFmc", "SBSmc2"),
+  DatLoc  = c("/home/rstudio/data/FLNR_PEM/Covariates_Paper/AlezaLake/training_pts/aleza_tpts.gpkg",
+              "/home/rstudio/data/FLNR_PEM/Covariates_Paper/EagleHills/training_pts/IDFxh2.gpkg",
+              "/home/rstudio/data/FLNR_PEM/Covariates_Paper/EagleHills/training_pts/IDFdk1.gpkg",
+              "/home/rstudio/data/FLNR_PEM/Covariates_Paper/Deception/training_pts/ESSFmc.gpkg",
+              "/home/rstudio/data/FLNR_PEM/Covariates_Paper/Deception/training_pts/SBSmc2.gpkg"),
+  outDir = c("mods/SBSwk1_reduced","mods/IDFxh2_reduced", "mods/IDFdk1_reduced",
+             "mods/ESSFmc_reduced", "mods/SBSmc2_reduced")
+)
+
+kable(datSets, format = tformat)
+
+```
+
+
+### Cross validated -- 10m reduced set.
+
+The top 10 covariates for each site are used.
+
+```{r}
+## Top 10 covariates -- from each subzone -- code originated in 122_
+dat <- read.csv("/home/rstudio/workspace/2021/PEM/PEM_Paper_Covariates/out/VI_Top10_10m_all.csv")
+
+smry <- dat %>%
+  group_by(Subzone, covar) %>%
+  summarise(VIm = mean(VI),
+            VIsd = sd(VI, na.rm = TRUE),
+            n = n()) %>%
+  mutate(rank = order(order(VIm, decreasing=TRUE))) %>%
+  arrange(Subzone, rank) %>%
+  filter(rank <= 10) %>%  ## drop the 11 and 12 positions
+  ungroup()
+
+## Proportion of VI
+smry <- smry %>%
+  group_by(Subzone) %>%
+  mutate(r.vi = VIm / sum(VIm)) %>%
+  ungroup()
+
+```
+
+
+Cross validated ranger -- using original settings (i.e. from 110)
+
+
+```{r}
+# tictoc::tic("all")
+# for (i in 1:nrow(datSets)) {
+  i <- 1
+  print(paste("Processing", datSets$Name[i], datSets$Subzone[i], ":"))
+  # tictoc::tic(datSets$Subzone[i])
+  dat <- st_read(datSets$DatLoc[i], quiet = TRUE)
+  dat <- as.data.frame(dat) ## convert to DF
+
+  ## Reduce the number of covariates to the top 10
+  cvs <- smry %>% filter(Subzone == datSets$Subzone[i])
+  cvs <- cvs$covar
+
+  dat <- dat %>% dplyr::select(1, all_of(cvs))  ## drop unneeded columns
+  dat <- dat[complete.cases(dat),]
+  dat$SiteSeries <- as.factor(dat$SiteSeries)
+
+  
+  outdir <- datSets$outDir[i]
+  
+  pemgeneratr::model_gen(traindat = dat,
+                         target = "SiteSeries",
+                         trees = 10,
+                         outDir = datSets$outDir[i],
+                         mType = "test")
+  # tictok::toc(quiet = FALSE)
+# }
+# tictoc::toc()
+```
+

@@ -42,7 +42,7 @@ model_gen(traindat = dat,
           target = "SiteSeries",
           outDir = "e:/tmp/model_gen_test",
           mType = "rF",
-          trees = "500",
+          trees = 500,
           rseed = 456)
 }
 \keyword{machine-learning,}

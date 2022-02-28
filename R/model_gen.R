@@ -11,7 +11,7 @@
 #' @param traindat Is a dataframe that contains the model training data.  The reponse variable should be one of the columns.
 #' @param target   The name of the response variable in the traindat data frame.
 #' @param mType **rF** for a `ranger` random forest; **tidy** for a tidymodels version using ranger; **esb** for an `ensemble` of `ranger`, `glmnet`, `xgboost`, and `nnTrain``; _others to be added_.  This acts as a suffix for which model_gen_XXX.Rmd to call.
-#' @param trees A random forest parameter for the number of trees to use.
+#' @param trees   A random forest parameter for the number of trees to use.
 #' @param rseed    Optional random number seed.
 #' @keywords machine-learning, model, report
 #' @export
@@ -24,14 +24,15 @@
 #'           target = "SiteSeries",
 #'           outDir = "e:/tmp/model_gen_test",
 #'           mType = "rF",
-#'           trees = "500",
+#'           trees = 500,
 #'           rseed = 456)
 
 
 model_gen <- function(traindat, target, mType = "rF", outDir = ".", trees = 500, rseed = NA) {
   ## create destination folder
   ifelse(!dir.exists(file.path(outDir)),                # if folder does not exist
-          dir.create(file.path(outDir)), FALSE)         # create it
+          dir.create(file.path(outDir), recursive = TRUE),
+          FALSE)         # create it
 
 
   ## Convert to data frame -------------------
@@ -53,6 +54,11 @@ model_gen <- function(traindat, target, mType = "rF", outDir = ".", trees = 500,
                      package = "pemgeneratr") ## this syntax designed for a package install.
   # RMD <- "./R/model_gen.Rmd"  ## manually set for sourcing this function
 
+  ## had some trouble with relative filenames
+  outDir <- normalizePath(outDir)
+
+
+
   rmarkdown::render(RMD,              ## where the rmd is located
                     params = list(traindat = traindat,  ## parameters to send to rmarkdown
                                   target   = target,
@@ -62,7 +68,7 @@ model_gen <- function(traindat, target, mType = "rF", outDir = ".", trees = 500,
                     output_dir = outDir)                ## where to save the report
 
   ## open the report
-  browseURL(paste(outDir, "model_gen.html", sep = "/"))
+  browseURL(paste0(outDir, "/model_gen_", mType, ".html"))
 }
 
 

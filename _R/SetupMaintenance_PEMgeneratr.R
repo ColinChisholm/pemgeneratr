@@ -20,7 +20,7 @@ document()
 
 ## Install Package
 # setwd("..")
-install("../pemgeneratr")
+install("../pemgeneratr", upgrade = FALSE)
 # ??PEMgeneratr::aoi_snap ## Confirm help file works
 
 
@@ -29,3 +29,4 @@ install("../pemgeneratr")
 # library(pemgeneratr)
 ?pemgeneratr::make_lines()
 ?pemgeneratr::create_covariates()
+

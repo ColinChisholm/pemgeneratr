@@ -1,0 +1,63 @@
+---
+title: "Machine Learning Model Using Ranger"
+output: html_document
+params:
+  outDir: "."
+  traindat: traindat
+  target: target
+  rseed: NA
+  trees: 500
+---
+
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=FALSE,
+                      warning = FALSE, message = FALSE,
+                      results = 'show',
+                      eval = TRUE)  ## flag eval = false for quick text edits
+
+
+# install.packages("mlr", dependencies = TRUE)
+library(mlr)
+library(tidyverse)
+library(knitr)
+
+
+```
+
+```{r}
+
+# ## Load the data
+modDat <- params$traindat
+target <- params$target
+
+trees <- params$trees
+
+rseed <- params$rseed
+
+## define output directory
+outDir <- params$outDir
+
+
+
+
+```
+
+
+
+
+```{r, results='hold'}
+print(paste("Target:", target))
+print(paste("saving to:", outDir))
+print(names(modDat))
+print(head(modDat))
+print(paste("Growing", trees ,"trees"))
+print(paste("Random seed", rseed))
+```
+
+
+```{r}
+names(modDat)
+head(modDat)
+```
+
