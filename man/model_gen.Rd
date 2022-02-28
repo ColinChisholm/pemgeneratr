@@ -9,7 +9,7 @@ model_gen(
   target,
   mType = "rF",
   outDir = ".",
-  trees = "500",
+  trees = 500,
   rseed = NA
 )
 }

@@ -1,5 +1,5 @@
 
-
+remove.packages("pemgeneratr")
 ## Initialize Package ----------------------------------
 # # install.packages("devtools")
 library("devtools")
@@ -19,13 +19,13 @@ document()
 
 
 ## Install Package
-setwd("..")
-install("pemGenertaR")
+# setwd("..")
+install("../pemgeneratr")
 # ??PEMgeneratr::aoi_snap ## Confirm help file works
 
 
-setwd("./pemGenertaR")
+# setwd("./pemgeneratr")
 
-library(pemgeneratr)
-?make_lines
-?create_covariates
+# library(pemgeneratr)
+?pemgeneratr::make_lines()
+?pemgeneratr::create_covariates()

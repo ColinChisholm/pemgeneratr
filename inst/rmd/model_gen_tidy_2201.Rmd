@@ -1,6 +1,6 @@
 ---
 title: "Machine Learning Model: tidyverse"
-subtitle: "r paste('Model ID:', params$mname)
+subtitle: "r paste('Model ID:', params$mname)"
 output: html_document
 params:
   trDat: trDat
@@ -9,18 +9,17 @@ params:
   target: target
   target2: target2
   tid: tid
+  field_transect: field_transect
+  slice: slice
   ds_ratio: ds_ratio
   sm_ratio: sm_ratio
   rseed: rseed
   infiles: infiles
   mmu: mmu
-  field_transect: field_transect
-
-
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache=FALSE,
+knitr::opts_chunk$set(echo = FALSE, cache=FALSE,
                       warning = FALSE, message = FALSE,
                       results = 'show',
                       eval = TRUE)  ## flag eval = false for quick text edits
@@ -30,16 +29,18 @@ knitr::opts_chunk$set(echo = TRUE, cache=FALSE,
 ## Load the data and parameters as specified in the R script (model_gen_tidy.R)
 
 trDat <- params$trDat
+outDir <- params$outDir
+mname <- params$mname
 target <- params$target
 target2 <- params$target2
 tid <- params$tid
+field_transect <- params$field_transect
+slice <- params$slice
 ds_ratio <- params$ds_ratio
 sm_ratio <- params$sm_ratio
+rseed <- params$rseed
 infiles<- params$infiles
 mmu <- params$mmu
-mname <- params$mname
-field_transect <- params$field_transect
-outDir <- params$outDir
 
 
 library(data.table)
@@ -67,7 +68,7 @@ This model uses the following parameters:
 
 The following training points and frequency of points were used in the model.
 
-```{r summary, echo = FALSE, include = TRUE}
+```{r summary}
 table(trDat[, target])
 
 # calculate summary of raw training data set
@@ -81,7 +82,14 @@ ggplot(trDat, aes(target)) +
   theme(axis.text.x = element_text(angle = 90))+
   theme_pem()+
   scale_fill_discrete_sequential(palette = "Light Grays")
+```
 
+# CONTINUE FROM HERE !!!!!!!!!!!!!!
+
+```{r summary-by-slice}
+## Only if slices are declared
+
+if (!is.na(slice)) {
 trDat_slices <- trDat %>%
   group_by (slice) %>%
   dplyr::summarise(n.transect = length(unique(transect_id)),
@@ -93,7 +101,7 @@ ggplot(trDat_slices, aes(slice, number, fill = type)) +
   theme(axis.text.x = element_text(angle = 90))+
   theme_pem()+
   scale_fill_discrete_sequential(palette = "Light Grays")
-
+} 
 ```
 
 
@@ -106,7 +114,7 @@ trDat_all <- trDat[complete.cases(trDat[ , 7:length(trDat)]),]
 # create a subset of data by removing any variables not in model (required for model to run without error)
 
 trDat <- trDat_all %>%
-  dplyr::select(-c(bgc_cat)) %>%
+  dplyr::select(-c(bgc_cat)) %>%       ### CC: Is bgc_cat declared???
   mutate(slice = as.factor(slice))
 
 trDat <- trDat %>%

@@ -6,26 +6,47 @@
 \usage{
 model_gen_tidy(
   trDat,
-  target,
-  target2,
-  tid,
   outDir = ".",
-  mname = "model",
+  mname = "Model",
+  target = "target",
+  target2 = NA,
+  tid = NA,
+  field_transect = NA,
+  slice = NA,
+  ds_ratio = NA,
+  sm_ratio = NA,
   rseed = NA,
-  infiles = infiles,
-  mmu = mmu,
-  field_transect = field_transect
+  infiles = NA,
+  mmu = NA
 )
 }
 \arguments{
-\item{trDat}{Is a dataframe that contains the model training data.  The reponse variable should be one of the columns.}
-
-\item{target}{The name of the response variable in the traindat data frame.}
+\item{trDat}{Is a dataframe that contains the model training data.  The response variable should be one of the columns.}
 
 \item{outDir}{Highly recommended to be set as an absolute directory.  This defaults to the project's root directory OR where the RMD script is saved.
 Additional products generated from the associated `model_gen_tidy.Rmd`` markdown script will also be saved to this dir.}
 
+\item{mname}{Name for this model run.  Will be used to name outputs.}
+
+\item{target}{The name of the response variable in the trDat data frame.}
+
+\item{target2}{A second target}
+
+\item{tid}{Transect ID ... need to clarify how this is different from \verb{field transect}}
+
+\item{field_transect}{A transect ID ... need to clarify how this is different from \code{tid}}
+
+\item{slice}{Column ID for \emph{slices} from Conditioned Latin Hyper Sampling}
+
+\item{ds_ratio}{Covariate/predictor variable balancing: downsample proportion}
+
+\item{sm_ratio}{Covariate/predictor variable balancing: Smote proportion}
+
 \item{rseed}{Optional random number seed.}
+
+\item{infiles}{Simply for reporting -- to specify what files were used in the creation of trDat.}
+
+\item{mmu}{Map unit (e.g. BC BEC subzone).  This may be a column in the input data and will allow for the processing of multiple subzones in one model run.}
 }
 \description{
 This function takes in all the data needed to produce machine learning model.
@@ -37,6 +58,8 @@ and a binary model (RDS) that can then be used to predict on new data.
 
 
 }
+\keyword{forest,}
 \keyword{machine-learning,}
 \keyword{model,}
+\keyword{random}
 \keyword{report}
