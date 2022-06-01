@@ -29,4 +29,4 @@ install("../pemgeneratr", upgrade = FALSE)
 # library(pemgeneratr)
 ?pemgeneratr::make_lines()
 ?pemgeneratr::create_covariates()
-
+?pemgeneratr::st_erase()
