@@ -13,13 +13,13 @@ create_covariates(dtm, SAGApath = "", output = "./cv-rasters", layers = "all")
 
 \item{output}{Location of where rasters will be saved.}
 
-\item{layers}{The covariates that will be generated.  A full list of covariates is listed at:}
+\item{layers}{The covariates that will be generated.  A full list of covariates is listed at: ADD}
 }
 \description{
 \emph{This is an update of cov_dtm.R replacing the processing with 02a} from  BEC_DevExchange_Work_
 }
 \details{
-Takes a dtm and generates the covariates embeded in this function via SAGA GIS.
+Takes a dtm and via SAGA GIS generates the covariates embeded in this function.
 This script has been tested with SAGA 7.3 on Windows and Ubuntu 18.
 Depending on your system the path to \code{saga_cmd} may need to be specified.
 }

@@ -54,10 +54,6 @@ Inputs are handed to a RMD report/ script.
 Outputs include the markdown report, the cross validation object,
 and a binary model (RDS) that can then be used to predict on new data.
 }
-\examples{
-
-
-}
 \keyword{forest,}
 \keyword{machine-learning,}
 \keyword{model,}

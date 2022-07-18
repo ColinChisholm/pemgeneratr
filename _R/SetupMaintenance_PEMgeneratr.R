@@ -26,7 +26,7 @@ install("../pemgeneratr", upgrade = FALSE)
 
 # setwd("./pemgeneratr")
 
-# library(pemgeneratr)
+library(pemgeneratr)
 ?pemgeneratr::make_lines()
 ?pemgeneratr::create_covariates()
 ?pemgeneratr::st_erase()

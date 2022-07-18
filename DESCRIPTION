@@ -1,17 +1,17 @@
 Package: pemgeneratr
 Title: Predictive Ecosystem Mapping
-Version: 0.9.22.0228
+Version: 0.9.22.0718
 Authors@R:
     person(given = "Colin",
            family = "Chisholm",
            role = c("aut", "cre"),
            email = "colin.chisholm@unbc.ca",
            comment = c(ORCID = "0000-0002-0975-5042", TWITTER = "@ColinEChisholm"))
-Description: This package will provide a workflow to produce a Predictive Ecosystem Maps.  Key steps in the process include generation of co-variate layers, field sampling designs (stage1 and stage2), generation of predictive ecosystem maps for all ecosystem classes as well as probability maps for each individual class.  PEMs will be generated using machine learning tools.
+Description: Generates Predictive Maps from machine learning based models.  Key steps in the process include generation of co-variate layers, field sampling designs (stage1 and stage2), generation of predictive ecosystem maps for all ecosystem classes as well as probability maps for each individual class.  PEMs will be generated using machine learning tools.
 License: Apache License 2.0
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.0
 Imports:
     magrittr,
     sf,
