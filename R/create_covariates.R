@@ -2,7 +2,7 @@
 #'
 #' _This is an update of cov_dtm.R replacing the processing with 02a_ from  BEC_DevExchange_Work_
 #'
-#' Takes a dtm and generates the covariates embeded in this function via SAGA GIS.
+#' Takes a dtm and via SAGA GIS generates the covariates embeded in this function.
 #' This script has been tested with SAGA 7.3 on Windows and Ubuntu 18.
 #' Depending on your system the path to `saga_cmd` may need to be specified.
 #'
@@ -10,7 +10,7 @@
 #' @param dtm is a dtm raster object
 #' @param SAGApath Is the location of SAGA on your system.  On linux systems with SAGA GIS installed Use `SAGApath = ""`
 #' @param output Location of where rasters will be saved.
-#' @param layers The covariates that will be generated.  A full list of covariates is listed at:
+#' @param layers The covariates that will be generated.  A full list of covariates is listed at: ADD
 #' @keywords SAGA, covariates, predictors, raster
 #' @export
 #' @examples
@@ -24,6 +24,8 @@ create_covariates <- function(dtm, SAGApath = "",
                               output = "./cv-rasters",
                               layers = "all"){
 
+### In future this would be good to set as a lookup table and then have a single
+  # sub-function that uses the table parameters
 
 ####### Options -- All the possible covariates ########
   options <- c("Filled_sinks", "sinkroute", "dem_preproc", "slope_aspect_curve",
