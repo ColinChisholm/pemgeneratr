@@ -1,4 +1,5 @@
 #' Covariate generation from input dtm
+#' DEPRECIATED: use create_covariates.R
 #'
 #' Takes a dtm and uses SAGA GIS to generate the covariates embeded in this function.
 #' Note: the correct path to SAGA needs to be specified.
@@ -14,6 +15,7 @@
 
 
 cov_dtm <- function(dtm, SAGApath = "C:/SAGA/", output = "./cv-rasters"){
+  print("DEPRECIATED: Use `create_covariates()` for a more complete set")
   ## create output if it does not exist
   ifelse(!dir.exists(file.path(output)),              #if tmpOut Does not Exists
           dir.create(file.path(output), recursive = TRUE), "Directory Already Exisits")        #create tmpOut
