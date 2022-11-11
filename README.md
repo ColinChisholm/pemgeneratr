@@ -1,4 +1,13 @@
+_We are currently migrating and consolidating scripts to_
+
+# [`PEMr`](https://github.com/bcgov/PEMr)
+
+https://github.com/bcgov/PEMr
+
 <center>
+
+
+    
 <h1>
 `pemgeneratr`
 </h1>
