@@ -5,9 +5,17 @@ _We are currently migrating and consolidating scripts to_
 https://github.com/bcgov/PEMr
 
 <center>
+Dependancies 
 
+`predict_landscape()` relies on a couple older packages: 
 
-    
+1. `GSIF` can be installed via `remotes::install_version("GSIF", version = "0.5-5")`
+2. `gdalUtils` can be installed via: `devtools:::install_github("gearslaboratory/gdalUtils")`
+    - gdal also needs to be avalilable on the system.  
+    - For windows I find the easiest is to install it via the [OSGEOv4](https://trac.osgeo.org/osgeo4w/) installer.  Once installed add the directory that contains gdal_translate.exe should be added to the system PATH -- to make it available with out specifying full path. 
+
+--- 
+
 <h1>
 `pemgeneratr`
 </h1>
