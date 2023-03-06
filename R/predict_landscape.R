@@ -98,6 +98,19 @@ predict_landscape <- function(model, cov,tilesize = 500,
                                              nXSize = t$region.dim.x[1],
                                              nYSize = t$region.dim.y[1]))
 
+      ### Create an alternate template ------
+      ### This forces a numeric template
+      tdim <- dim(r[1])
+      ext <- sf::st_bbox(t)
+      emty <- raster::raster(nrow=tdim[1], ncol = tdim[2],
+                             xmn=ext[1], xmx=ext[3], ymn=ext[2], ymx=ext[4],
+                             vals=1.1)
+      template <- stars::st_as_stars(emty)
+      sf::st_crs(template) <- sf::st_crs(t)
+      ### ----------------------------------
+
+
+
       ## * update names ---------
       names(r) <- n
 
@@ -183,7 +196,8 @@ predict_landscape <- function(model, cov,tilesize = 500,
         for (j in 1:length(keep)) {
           # j <- 2  ## testing
           out <- stars::st_rasterize(r_out[j],
-                                     template = r[1])
+                                     # template = r[1])
+                                     template = template) ## fix template bug
           stars::write_stars(out,
                              paste0(outDir,"/",
                                     keep[j], "/",             #sub-directoy
@@ -211,7 +225,7 @@ predict_landscape <- function(model, cov,tilesize = 500,
       r_tiles <- list.files(paste(outDir, k, sep = "/"),
                             pattern = ".tif",
                             full.names = TRUE)
-      # remove pot. xml files 
+      # remove pot. xml files
       # this was causing script to fail -- returned empty vector
       # r_tiles <- r_tiles[-(grep(r_tiles, pattern = "xml"))] ## drop any associated xml files
 
