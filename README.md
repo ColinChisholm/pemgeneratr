@@ -1,3 +1,5 @@
+_Last tested with R version 4.0.5_
+
 _We are currently migrating and consolidating scripts to_
 
 # [`PEMr`](https://github.com/bcgov/PEMr)
